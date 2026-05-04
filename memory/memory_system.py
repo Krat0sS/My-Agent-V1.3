@@ -20,8 +20,14 @@ class MemorySystem:
             with open(config.MEMORY_FILE, "w", encoding="utf-8") as f:
                 f.write(f"# {config.AGENT_NAME} — 长期记忆\n\n")
         if not os.path.exists(config.SOUL_FILE):
-            with open(config.SOUL_FILE, "w", encoding="utf-8") as f:
-                f.write(f"# {config.AGENT_NAME} 的灵魂\n\n一个有用的AI助手。\n")
+            # 优先使用项目根目录的 SOUL.md 模板
+            bundled_soul = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "SOUL.md")
+            if os.path.exists(bundled_soul):
+                import shutil
+                shutil.copy2(bundled_soul, config.SOUL_FILE)
+            else:
+                with open(config.SOUL_FILE, "w", encoding="utf-8") as f:
+                    f.write(f"# {config.AGENT_NAME} 的灵魂\n\n一个有用的AI助手。\n")
 
     def _load_learned_params(self) -> dict:
         """加载可学习参数"""
