@@ -648,11 +648,12 @@ def get_peak_tasks(time_slot: str, day_type: str, min_confidence: float = 0.6) -
     """查询某时段的高频任务（过滤低置信度）"""
     conn = _get_conn()
     rows = conn.execute("""
-        SELECT task_type, frequency,
-               ROUND(1.0 * frequency / (SELECT SUM(frequency) FROM time_patterns WHERE time_slot=? AND day_type=?), 3) as confidence
-        FROM time_patterns
-        WHERE time_slot=? AND day_type=?
-        HAVING confidence >= ?
+        SELECT * FROM (
+            SELECT task_type, frequency,
+                   ROUND(1.0 * frequency / (SELECT SUM(frequency) FROM time_patterns WHERE time_slot=? AND day_type=?), 3) as confidence
+            FROM time_patterns
+            WHERE time_slot=? AND day_type=?
+        ) WHERE confidence >= ?
         ORDER BY frequency DESC
     """, (time_slot, day_type, time_slot, day_type, min_confidence)).fetchall()
     conn.close()
