@@ -180,25 +180,37 @@ def load_skill(skill_dir: Path) -> Optional[Skill]:
 
 
 def load_all_skills(skills_dir: Path = None) -> List[Skill]:
-    """加载所有技能"""
-    if skills_dir is None:
-        skills_dir = Path(os.path.join(config.WORKSPACE, "skills"))
-        if not skills_dir.exists():
-            # 也检查项目根目录下的 skills/
-            skills_dir = Path(os.path.join(os.path.dirname(os.path.dirname(__file__)), "skills"))
+    """加载所有技能（合并 workspace 技能 + 项目内置技能）"""
+    skill_dirs = []
+
+    if skills_dir is not None:
+        skill_dirs.append(skills_dir)
+    else:
+        # 1. workspace 技能（用户自建 + 万物沉淀）
+        ws_skills = Path(os.path.join(config.WORKSPACE, "skills"))
+        if ws_skills.exists():
+            skill_dirs.append(ws_skills)
+
+        # 2. 项目内置技能（desktop-organize, file-search, web-research）
+        builtin_skills = Path(os.path.join(os.path.dirname(os.path.dirname(__file__)), "skills"))
+        if builtin_skills.exists() and builtin_skills != ws_skills:
+            skill_dirs.append(builtin_skills)
 
     skills = []
-    if not skills_dir.exists():
-        return skills
+    seen_names = set()
 
-    for d in sorted(skills_dir.iterdir()):
-        if d.is_dir() and not d.name.startswith("_") and not d.name.startswith("."):
-            try:
-                skill = load_skill(d)
-                if skill:
-                    skills.append(skill)
-            except Exception as e:
-                print(f"⚠️ 加载技能 {d.name} 失败: {e}")
+    for skills_dir in skill_dirs:
+        for d in sorted(skills_dir.iterdir()):
+            if d.is_dir() and not d.name.startswith("_") and not d.name.startswith(".") and d.name != "__pycache__":
+                if d.name in seen_names:
+                    continue
+                try:
+                    skill = load_skill(d)
+                    if skill:
+                        skills.append(skill)
+                        seen_names.add(d.name)
+                except Exception as e:
+                    print(f"⚠️ 加载技能 {d.name} 失败: {e}")
 
     return skills
 
