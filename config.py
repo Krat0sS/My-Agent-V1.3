@@ -61,7 +61,7 @@ SESSIONS_DIR = os.path.join(WORKSPACE, "sessions")
 OLLAMA_ENABLED = os.environ.get("OLLAMA_ENABLED", "true").lower() == "true"
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "modelscope.cn/qwen/Qwen2.5-7B-Instruct-GGUF:latest")
-OLLAMA_TIMEOUT = float(os.environ.get("OLLAMA_TIMEOUT", "30"))
+OLLAMA_TIMEOUT = float(os.environ.get("OLLAMA_TIMEOUT", "10"))
 OLLAMA_MAX_TOKENS = int(os.environ.get("OLLAMA_MAX_TOKENS", "4096"))
 
 # Vision 模型
