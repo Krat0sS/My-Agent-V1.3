@@ -1,4 +1,4 @@
-"""对话管理器 — Agent 核心循环（v1.3：修复 decompose_task 重复调用 + 路由日志）"""
+"""对话管理器 — Agent 核心循环（v1.3.5：五层易经流水线）"""
 import json
 import os
 import time
@@ -12,6 +12,13 @@ from memory.memory_system import MemorySystem
 from security.context_sanitizer import get_security_prompt
 from data import execution_log
 import config
+
+# v1.3.5: 易经五层流水线
+from core.taiji import taiji_diagnose, get_action_description
+from core.change_engine import assess_yao, execute_recovery, format_yao_message
+from core.wanwu import wanwu_generate, record_wanwu_result, check_promotion_candidates, promote_to_skill
+from core.orchestrator import orchestrate, log_orchestration, format_orchestration_message
+from core.temporal import get_temporal_context, record_task_pattern, handle_suggestion_rejection, format_temporal_message
 
 
 class Conversation:
@@ -344,8 +351,58 @@ class Conversation:
             pass
 
         elapsed = time.time() - start_time
+        success = "error" not in result_raw.lower()
         self._log_tool_call(func_name, args, result_raw, elapsed, 0)
-        execution_log.log_tool_call(func_name, args, result_raw[:500], success="error" not in result_raw.lower(), elapsed_ms=int(elapsed * 1000), session_id=self.session_id)
+        execution_log.log_tool_call(func_name, args, result_raw[:500], success=success, elapsed_ms=int(elapsed * 1000), session_id=self.session_id)
+
+        # ═══ v1.3.5: 变爻判定（第五层） ═══
+        if not success:
+            yao = assess_yao(func_name, args, result_raw, success=False,
+                             error_message=result_raw[:200])
+            recovery = execute_recovery(yao)
+
+            if yao.should_retry and yao.retry_params:
+                # 少阴：自动重试一次（调参数）
+                try:
+                    retry_result = await asyncio.wait_for(
+                        loop.run_in_executor(None, registry.execute, func_name, yao.retry_params),
+                        timeout=config.TOOL_TIMEOUT
+                    )
+                    retry_success = "error" not in retry_result.lower()
+                    execution_log.log_tool_call(
+                        func_name, yao.retry_params, retry_result[:500],
+                        success=retry_success,
+                        elapsed_ms=int((time.time() - start_time) * 1000),
+                        session_id=self.session_id,
+                        yao_type='young_yin_retry',
+                        recovery_action='retry'
+                    )
+                    if retry_success:
+                        return retry_result
+                except Exception:
+                    pass  # 重试失败，返回原始错误
+
+            elif yao.should_rollback:
+                # 老阴：标记技能不可用
+                result_raw = json.dumps({
+                    "error": True,
+                    "type": "yao_old_yin",
+                    "tool": func_name,
+                    "message": format_yao_message(yao),
+                    "recovery": recovery
+                }, ensure_ascii=False)
+
+            elif yao.should_deposit:
+                # 老阳：标记为高价值路径
+                result_raw = json.dumps({
+                    "success": True,
+                    "type": "yao_old_yang",
+                    "tool": func_name,
+                    "result": result_raw[:500],
+                    "message": format_yao_message(yao),
+                    "deposited": True
+                }, ensure_ascii=False)
+
         return result_raw
 
     async def _execute_browser_session_tool(self, func_name: str, args: dict) -> str:
@@ -401,6 +458,22 @@ class Conversation:
         self._trim_context()
         self._sanitize_messages()
 
+        # ═══ v1.3.5: 太极诊断（第一层） ═══
+        diagnosis = taiji_diagnose(user_message, session_id=self.session_id)
+        if on_progress:
+            on_progress(f"☯️ {diagnosis.hexagram}（内={diagnosis.inner} 外={diagnosis.outer}）")
+
+        # 危机状态：直接进入恢复流程，跳过正常路由
+        if diagnosis.inner == 'old_yin':
+            if on_progress:
+                on_progress(f"⚠️ 系统处于危机状态（{diagnosis.hexagram}），启动恢复流程")
+            # 不阻断，让后续 change_engine 处理
+
+        # ═══ v1.3.5: 时辰感知（第二层） ═══
+        temporal_ctx = get_temporal_context()
+        if temporal_ctx.suggestion and on_progress:
+            on_progress(f"🕐 {format_temporal_message(temporal_ctx)}")
+
         # ═══ v1.1: 意图路由 ═══
         from core.intent_router import route, decompose_task, generate_skill_md, save_skill
         from skills.loader import load_all_skills
@@ -444,7 +517,13 @@ class Conversation:
                 success=skill_result.get("success", False),
                 duration_ms=duration_ms,
                 session_id=self.session_id,
+                time_slot=temporal_ctx.time_slot,
+                task_type=temporal_ctx.energy_level,
             )
+
+            # ═══ v1.3.5: 时辰规律记录 ═══
+            if skill_result.get("success"):
+                record_task_pattern(user_message, routing.matched_skill.name)
 
             # v1.3: 记录路由决策
             execution_log.log_routing_decision(
@@ -471,33 +550,74 @@ class Conversation:
                 if on_progress:
                     on_progress(f"⚠️ 技能执行失败，回退到普通对话: {skill_result.get('error', '')}")
 
-        # —— 复杂任务或未命中：分解 → 执行 → 沉淀 ——
+        # —— 复杂任务或未命中：先万物生成，再分解 → 执行 → 沉淀 ——
         elif routing.action == "decompose":
             if on_progress:
-                on_progress("📝 未命中已有技能，正在分解任务...")
+                on_progress("📝 未命中已有技能，尝试万物组合...")
 
-            # v1.3: 只调用一次 decompose_task，缓存结果
-            cached_plan = await decompose_task(user_message)
+            # ═══ v1.3.5: 万物生成器（第三层） ═══
+            # 在 LLM 分解之前，先尝试将已有技能"相错"组合
+            available_skills = [s.name for s in skills] if skills else []
+            wanwu_plan = wanwu_generate(user_message, available_skills, session_id=self.session_id)
 
-            if cached_plan.get("steps") and not cached_plan.get("error"):
-                # 把计划注入系统提示
-                plan_text = f"📋 目标：{cached_plan.get('goal', user_message)}\n"
-                for step in cached_plan["steps"]:
-                    deps = step.get("depends_on", [])
-                    dep_str = f" (依赖步骤 {','.join(map(str, deps))})" if deps else ""
-                    plan_text += f"  {step['id']}. {step['action']}{dep_str}\n"
+            if wanwu_plan:
+                if on_progress:
+                    on_progress(f"🌱 {wanwu_plan.summary()}")
+
+                # 万物计划注入上下文，让 LLM 按计划执行
+                plan_text = f"📋 万物组合计划：{wanwu_plan.skill_a}（发起）→ {wanwu_plan.skill_b}（承载）\n"
+                for step in wanwu_plan.steps:
+                    plan_text += f"  步骤 {step['step']}: {step['action']}\n"
 
                 self.messages.append({
                     "role": "system",
-                    "content": f"[任务规划]\n{plan_text}\n\n请按以上步骤逐步执行。"
+                    "content": f"[万物组合]\n{plan_text}\n\n请按以上步骤执行。这是一个临时组合计划。"
                 })
 
-            # v1.3: 记录路由决策
-            execution_log.log_routing_decision(
-                user_message,
-                candidates=[{"skill": name, "score": round(s, 3)} for name, s in routing.candidates] if routing.candidates else [],
-                fallback_to_decompose=True,
-            )
+                # 记录路由决策
+                execution_log.log_routing_decision(
+                    user_message,
+                    candidates=[wanwu_plan.skill_a, wanwu_plan.skill_b],
+                    chosen_skill=f"{wanwu_plan.skill_a}+{wanwu_plan.skill_b}",
+                    chosen_score=1.0,
+                    fallback_to_decompose=False,
+                )
+            else:
+                # 万物组合失败，回退到 LLM 分解
+                if on_progress:
+                    on_progress("📝 万物组合无法匹配，回退到任务分解...")
+
+                # v1.3: 只调用一次 decompose_task，缓存结果
+                cached_plan = await decompose_task(user_message)
+
+                if cached_plan.get("steps") and not cached_plan.get("error"):
+                    # ═══ v1.3.5: 五行编排（第四层） ═══
+                    # 用编排器重排计划步骤
+                    step_skills = [s.get('tool', s.get('action', '')) for s in cached_plan["steps"]]
+                    if len(step_skills) > 1:
+                        orch_result = orchestrate(step_skills)
+                        log_orchestration(user_message, orch_result, session_id=self.session_id)
+                        if on_progress and orch_result.generate_bonus > 0:
+                            on_progress(f"🔄 {format_orchestration_message(orch_result)}")
+
+                    # 把计划注入系统提示
+                    plan_text = f"📋 目标：{cached_plan.get('goal', user_message)}\n"
+                    for step in cached_plan["steps"]:
+                        deps = step.get("depends_on", [])
+                        dep_str = f" (依赖步骤 {','.join(map(str, deps))})" if deps else ""
+                        plan_text += f"  {step['id']}. {step['action']}{dep_str}\n"
+
+                    self.messages.append({
+                        "role": "system",
+                        "content": f"[任务规划]\n{plan_text}\n\n请按以上步骤逐步执行。"
+                    })
+
+                # v1.3: 记录路由决策
+                execution_log.log_routing_decision(
+                    user_message,
+                    candidates=[{"skill": name, "score": round(s, 3)} for name, s in routing.candidates] if routing.candidates else [],
+                    fallback_to_decompose=True,
+                )
 
         # ═══ v1.3: 根据路由结果选择 LLM 客户端 ═══
         # simple → Ollama 本地（低成本）
@@ -561,7 +681,22 @@ class Conversation:
                     success=True,
                     duration_ms=duration_ms,
                     session_id=self.session_id,
+                    time_slot=temporal_ctx.time_slot,
+                    task_type=temporal_ctx.energy_level,
                 )
+
+                # ═══ v1.3.5: 时辰规律记录 ═══
+                record_task_pattern(user_message, routing.matched_skill.name if routing.matched_skill else None)
+
+                # ═══ v1.3.5: 万物沉淀检查 ═══
+                try:
+                    candidates = check_promotion_candidates()
+                    for cand in candidates:
+                        promote_to_skill(cand)
+                        if on_progress:
+                            on_progress(f"🌱 新技能已沉淀: {cand.skill_a}+{cand.skill_b}（成功 {cand.success_count} 次）")
+                except Exception:
+                    pass  # 沉淀检查失败不影响正常回复
 
                 self.save_session()
                 return self._build_result(assistant_msg, rounds)
