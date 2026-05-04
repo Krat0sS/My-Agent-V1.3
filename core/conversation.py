@@ -120,26 +120,85 @@ class Conversation:
         except Exception:
             self._init_system()
 
-    # ═══ 上下文保护 ═══
+    # ═══ 上下文保护（v1.3.4: 智能压缩） ═══
+
+    # 压缩阈值：超过这个轮次就开始压缩旧消息
+    _COMPRESS_AFTER_TURNS = 8    # 8 轮后压缩（16 条消息）
+    # 保留最近 N 轮完整上下文
+    _KEEP_RECENT_TURNS = 5
+    # 每条旧消息最大保留字符数
+    _MAX_OLD_MSG_LEN = 300
 
     def _trim_context(self):
+        """
+        v1.3.4 智能上下文压缩。
+
+        策略：
+        - 最近 5 轮（10 条消息）保持完整
+        - 更早的消息：保留关键信息，压缩冗余
+        - 用户消息：原样保留（是意图记录）
+        - 工具结果：保留摘要（工具名 + 结果前 200 字）
+        - 助手消息：保留工具调用记录 + 内容摘要
+        - 系统消息：永远保留
+        """
         system_msgs = [m for m in self.messages if m["role"] == "system"]
         history = [m for m in self.messages if m["role"] != "system"]
-        max_messages = config.MAX_CONTEXT_TURNS * 2
-        if len(history) <= max_messages:
-            return
-        old_history = history[:-max_messages]
-        recent_history = history[-max_messages:]
+
+        keep_count = self._KEEP_RECENT_TURNS * 2  # 每轮 = user + assistant
+        if len(history) <= keep_count:
+            return  # 还没到压缩阈值
+
+        old_history = history[:-keep_count]
+        recent_history = history[-keep_count:]
+
+        # 压缩旧消息
         condensed = []
         for msg in old_history:
-            if msg["role"] == "assistant" and "content" in msg:
-                content = msg["content"]
-                if len(content) > 200:
-                    condensed.append({"role": "assistant", "content": f"[历史摘要] ...{content[-200:]}"})
+            role = msg.get("role", "")
+
+            if role == "user":
+                # 用户消息：原样保留（是意图记录）
+                condensed.append(msg)
+
+            elif role == "assistant":
+                if "tool_calls" in msg:
+                    # 有工具调用的助手消息：保留工具调用名称和参数摘要
+                    tool_summary = []
+                    for tc in msg.get("tool_calls", []):
+                        fn = tc.get("function", {})
+                        name = fn.get("name", "?")
+                        args_str = fn.get("arguments", "{}")[:80]
+                        tool_summary.append(f"{name}({args_str})")
+                    condensed.append({
+                        "role": "assistant",
+                        "content": f"[调用了: {', '.join(tool_summary)}]"
+                    })
+                elif msg.get("content"):
+                    # 纯文本回复：截取关键部分
+                    content = msg["content"]
+                    if len(content) > self._MAX_OLD_MSG_LEN:
+                        # 保留前 150 字 + 后 100 字（开头是结论，结尾可能是总结）
+                        condensed.append({
+                            "role": "assistant",
+                            "content": content[:150] + f"\n...[压缩]...\n" + content[-100:]
+                        })
+                    else:
+                        condensed.append(msg)
+
+            elif role == "tool":
+                # 工具结果：保留工具名和结果摘要
+                tool_id = msg.get("tool_call_id", "")
+                content = msg.get("content", "")
+                if len(content) > self._MAX_OLD_MSG_LEN:
+                    condensed.append({
+                        "role": "tool",
+                        "tool_call_id": tool_id,
+                        "content": content[:self._MAX_OLD_MSG_LEN] + "...[已压缩]"
+                    })
                 else:
                     condensed.append(msg)
-            elif msg["role"] == "user":
-                condensed.append(msg)
+
+        # 确保 recent_history 不以孤立的 tool 消息开头
         while recent_history and recent_history[0]["role"] in ("tool", "assistant"):
             if recent_history[0]["role"] == "tool":
                 recent_history.pop(0)
@@ -147,7 +206,21 @@ class Conversation:
                 recent_history.pop(0)
             else:
                 break
-        self.messages = system_msgs + condensed[-20:] + recent_history
+
+        self.messages = system_msgs + condensed + recent_history
+
+    def get_context_stats(self) -> dict:
+        """获取上下文统计（调试用）"""
+        system_msgs = [m for m in self.messages if m["role"] == "system"]
+        history = [m for m in self.messages if m["role"] != "system"]
+        total_chars = sum(len(m.get("content", "")) for m in self.messages)
+        return {
+            "total_messages": len(self.messages),
+            "system_messages": len(system_msgs),
+            "history_messages": len(history),
+            "total_chars": total_chars,
+            "estimated_tokens": total_chars // 2,  # 粗估：中文约 2 字符 = 1 token
+        }
 
     def _sanitize_messages(self):
         import re
@@ -541,6 +614,9 @@ class Conversation:
                             self.messages.append({"role": "system", "content": f"[操作验证] {func_name} 执行后截图: {verify_result[:500]}"})
                     except (json.JSONDecodeError, Exception):
                         pass
+
+            # v1.3.4: 每轮工具调用后检查是否需要压缩上下文
+            self._trim_context()
 
         fallback = "我执行了太多工具调用，请简化你的请求。"
         self.messages.append({"role": "assistant", "content": fallback})
