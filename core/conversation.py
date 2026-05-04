@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """对话管理器 — Agent 核心循环（v1.3.5：五层易经流水线）"""
 import json
 import os
