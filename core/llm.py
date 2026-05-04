@@ -107,6 +107,14 @@ async def _chat_ollama(messages: list[dict], tools: list[dict] = None,
 
 async def _execute_chat(client: AsyncOpenAI, kwargs: dict, timeout: float) -> dict:
     """执行 LLM 调用（通用逻辑）"""
+    # [DEBUG] 打印工具调用信息
+    tools_list = kwargs.get('tools', [])
+    model = kwargs.get('model', '?')
+    print(f"[LLM] model={model}, tools={len(tools_list)}, tool_choice={kwargs.get('tool_choice', 'none')}")
+    if tools_list:
+        tool_names = [t['function']['name'] for t in tools_list[:8]]
+        print(f"[LLM] tools_preview: {tool_names}...")
+
     try:
         resp = await asyncio.wait_for(
             client.chat.completions.create(**kwargs),
@@ -119,6 +127,11 @@ async def _execute_chat(client: AsyncOpenAI, kwargs: dict, timeout: float) -> di
 
     msg = resp.choices[0].message
     result = {"role": "assistant", "content": msg.content or ""}
+    has_tool_calls = bool(msg.tool_calls)
+    print(f"[LLM] response: tool_calls={has_tool_calls}, content_len={len(msg.content or '')}")
+    if has_tool_calls:
+        for tc in msg.tool_calls:
+            print(f"[LLM]   → {tc.function.name}({tc.function.arguments[:100]})")
     if msg.tool_calls:
         result["tool_calls"] = [
             {"id": tc.id, "type": "function", "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
