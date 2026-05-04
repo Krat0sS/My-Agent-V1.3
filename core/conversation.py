@@ -782,10 +782,16 @@ class Conversation:
                 )
 
         # ═══ v1.3: 根据路由结果选择 LLM 客户端 ═══
-        # simple → Ollama 本地（低成本）
+        # simple → Ollama 本地（低成本），但需要工具时必须走 DeepSeek
         # medium/complex → DeepSeek 云端（高能力）
         # execute_skill → 技能内部决定，这里不走 LLM
         use_ollama = (routing.action == "direct_tool")
+        if use_ollama:
+            # 如果用户意图涉及工具调用（搜索、打开、运行等），Ollama 不可靠，直接走 DeepSeek
+            tool_keywords = ['搜索', '搜一下', '查找', '打开', '运行', '执行', '下载', '截图',
+                             '整理', '创建', '删除', '备份', '清理', '分析', '监控']
+            if any(kw in user_message for kw in tool_keywords):
+                use_ollama = False
 
         # ═══ 普通 LLM 对话循环 ═══
         while self.tool_call_count < config.MAX_TOOL_CALLS_PER_TURN:
