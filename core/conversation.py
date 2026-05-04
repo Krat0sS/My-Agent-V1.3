@@ -1,11 +1,13 @@
 """对话管理器 — Agent 核心循环（v1.3.5：五层易经流水线）"""
 import json
 import os
+import re
 import time
 import datetime
 import asyncio
 import atexit
-from typing import Callable, Optional
+from dataclasses import dataclass
+from typing import Callable, Optional, List
 from core.llm import chat
 from tools.registry import registry
 from memory.memory_system import MemorySystem
@@ -13,12 +15,48 @@ from security.context_sanitizer import get_security_prompt
 from data import execution_log
 import config
 
-# v1.3.5: 易经五层流水线
-from core.taiji import taiji_diagnose, get_action_description
+# v1.3.5: 易经五层流水线（taiji 诊断硬嵌入 Conversation，不从外部 import）
 from core.change_engine import assess_yao, execute_recovery, format_yao_message
 from core.wanwu import wanwu_generate, record_wanwu_result, check_promotion_candidates, promote_to_skill
 from core.orchestrator import orchestrate, log_orchestration, format_orchestration_message
 from core.temporal import get_temporal_context, record_task_pattern, handle_suggestion_rejection, format_temporal_message
+
+
+# ═══════════════════════════════════════════════════════════
+# 太极诊断常量（硬嵌入，不依赖外部模块）
+# ═══════════════════════════════════════════════════════════
+
+_HEXAGRAM_ACTION = {
+    ('old_yang', 'old_yang'):    ('乾为天',      'full_execute'),
+    ('old_yang', 'young_yang'):  ('天风姤',      'execute_with_watch'),
+    ('old_yang', 'young_yin'):   ('天山遁',      'execute_partial'),
+    ('old_yang', 'old_yin'):     ('天地否',      'pause_ask'),
+    ('young_yang', 'old_yang'):  ('风天小畜',    'execute_normal'),
+    ('young_yang', 'young_yang'):('巽为风',      'execute_cautious'),
+    ('young_yang', 'young_yin'): ('风山渐',      'step_by_step'),
+    ('young_yang', 'old_yin'):   ('风地观',      'observe_first'),
+    ('young_yin', 'old_yang'):   ('山天大畜',    'retry_then_execute'),
+    ('young_yin', 'young_yang'): ('山风蛊',      'fix_then_continue'),
+    ('young_yin', 'young_yin'):  ('艮为山',      'stop_analyze'),
+    ('young_yin', 'old_yin'):    ('山地剥',      'rollback_request'),
+    ('old_yin', 'old_yang'):     ('地天泰',      'recover_easy'),
+    ('old_yin', 'young_yang'):   ('地风升',      'recover_step'),
+    ('old_yin', 'young_yin'):    ('地山谦',      'humble_rollback'),
+    ('old_yin', 'old_yin'):      ('坤为地',      'full_stop'),
+}
+
+_VAGUE_PATTERNS = ['帮我', '看看', '弄一下', '搞一下', '处理', '解决', '怎么办', '什么', '为什么', '怎么样']
+
+
+@dataclass
+class _TaijiResult:
+    """太极诊断结果（Conversation 内部使用）"""
+    inner: str
+    outer: str
+    inner_score: float
+    outer_score: float
+    hexagram: str
+    action_hint: str
 
 
 class Conversation:
@@ -435,7 +473,130 @@ class Conversation:
         }
         self.tool_log.append(entry)
 
-    # ═══ 对话主循环（v1.3：修复 decompose_task 重复调用 + 路由日志） ═══
+    # ═══════════════════════════════════════════════════════════
+    # 太极诊断（硬嵌入 Conversation，不可跳过）
+    # ═══════════════════════════════════════════════════════════
+
+    def _taiji_diagnose(self, user_input: str) -> _TaijiResult:
+        """
+        太极诊断 — send() 的第一行，不可跳过。
+
+        内卦：最近 10 轮工具调用的指数衰减加权评分
+        外卦：指令明确度 + 工具可用性
+        卦象：16 种组合，字典查表
+        """
+        start = time.time()
+
+        # ── 内卦：Agent 自身状态 ──
+        recent = execution_log.get_recent_tool_calls(limit=10)
+        inner_score = self._calculate_inner_score(recent)
+        if inner_score > 0.6:
+            inner = 'old_yang'
+        elif inner_score > 0.2:
+            inner = 'young_yang'
+        elif inner_score > -0.2:
+            inner = 'young_yin'
+        else:
+            inner = 'old_yin'
+
+        # ── 外卦：任务环境状态 ──
+        clarity = self._assess_clarity(user_input)
+        tool_ready = self._check_tool_availability(user_input)
+        outer_score = (clarity + tool_ready) / 2
+        if outer_score > 0.7:
+            outer = 'old_yang'
+        elif outer_score > 0.45:
+            outer = 'young_yang'
+        elif outer_score > 0.25:
+            outer = 'young_yin'
+        else:
+            outer = 'old_yin'
+
+        # ── 卦象查表 ──
+        hexagram, action_hint = _HEXAGRAM_ACTION.get((inner, outer), ('未知卦', 'full_stop'))
+
+        elapsed_ms = int((time.time() - start) * 1000)
+
+        # ── 写入诊断日志 ──
+        execution_log.log_diagnosis(
+            inner_state=inner, outer_state=outer,
+            inner_score=round(inner_score, 3), outer_score=round(outer_score, 3),
+            hexagram=hexagram, action_hint=action_hint,
+            elapsed_ms=elapsed_ms, session_id=self.session_id
+        )
+
+        return _TaijiResult(
+            inner=inner, outer=outer,
+            inner_score=round(inner_score, 3), outer_score=round(outer_score, 3),
+            hexagram=hexagram, action_hint=action_hint
+        )
+
+    @staticmethod
+    def _calculate_inner_score(recent_calls: List[dict]) -> float:
+        """内卦评分：指数衰减加权（最近成败权重最大，每轮衰减 30%）"""
+        if not recent_calls:
+            return 0.0
+        weight = 1.0
+        total = 0.0
+        max_possible = 0.0
+        for call in reversed(recent_calls[:10]):
+            total += (1 if call.get('success', 1) else -1) * weight
+            max_possible += weight
+            weight *= 0.7
+        return total / max_possible if max_possible > 0 else 0.0
+
+    @staticmethod
+    def _assess_clarity(user_input: str) -> float:
+        """外卦-指令明确度：从 ToolRegistry 动态生成动词表"""
+        if not user_input or len(user_input.strip()) < 2:
+            return 0.1
+        text = user_input.strip()
+        score = 0.5
+        if len(text) > 10:
+            score += 0.1
+        # 动态动词表：从工具描述中提取
+        verbs = set()
+        try:
+            for tool in registry.get_all():
+                desc = tool.description or ""
+                match = re.match(r'^([\u4e00-\u9fff]{2,4})', desc.strip())
+                if match:
+                    verbs.add(match.group(1))
+        except Exception:
+            pass
+        if len(verbs) < 10:
+            verbs.update(['打开', '搜索', '整理', '创建', '删除', '发送', '分析', '查找',
+                          '备份', '清理', '关闭', '下载', '上传', '复制', '移动', '监控'])
+        has_verb = any(v in text for v in verbs)
+        if has_verb:
+            score += 0.2
+        is_vague = any(p in text for p in _VAGUE_PATTERNS)
+        if is_vague and not has_verb:
+            score -= 0.3
+        words = text.split()
+        if len(words) >= 3 or (len(text) > 8 and has_verb):
+            score += 0.1
+        return max(0.0, min(1.0, score))
+
+    @staticmethod
+    def _check_tool_availability(user_input: str) -> float:
+        """外卦-工具可用性：检查请求是否能被现有工具覆盖"""
+        tool_keywords = {
+            'file': ['文件', '搜索', '查找', '整理', '备份', '清理', '移动', '复制'],
+            'web': ['网页', '浏览器', '搜索', '下载', '网络'],
+            'desktop': ['桌面', '截图', '屏幕', '窗口'],
+            'system': ['系统', '进程', 'CPU', '内存', '磁盘'],
+        }
+        text = user_input if user_input else ''
+        matched = sum(1 for kws in tool_keywords.values() if any(k in text for k in kws))
+        if matched == 0:
+            return 0.5
+        elif matched == 1:
+            return 0.8
+        else:
+            return 0.6
+
+    # ═══ 对话主循环 ═══
 
     async def send(self, user_message: str,
                    on_confirm: Optional[Callable[[str], bool]] = None,
@@ -458,16 +619,16 @@ class Conversation:
         self._trim_context()
         self._sanitize_messages()
 
-        # ═══ v1.3.5: 太极诊断（第一层） ═══
-        diagnosis = taiji_diagnose(user_message, session_id=self.session_id)
+        # ═══ v1.3.5: 太极诊断（第一层，硬嵌入，不可跳过） ═══
+        diagnosis = self._taiji_diagnose(user_message)
         if on_progress:
             on_progress(f"☯️ {diagnosis.hexagram}（内={diagnosis.inner} 外={diagnosis.outer}）")
 
-        # 危机状态：直接进入恢复流程，跳过正常路由
+        # 危机状态：内卦为老阴时，直接进入恢复流程
         if diagnosis.inner == 'old_yin':
             if on_progress:
                 on_progress(f"⚠️ 系统处于危机状态（{diagnosis.hexagram}），启动恢复流程")
-            # 不阻断，让后续 change_engine 处理
+            # 不阻断，让后续 change_engine 处理具体恢复动作
 
         # ═══ v1.3.5: 时辰感知（第二层） ═══
         temporal_ctx = get_temporal_context()
