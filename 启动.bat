@@ -7,6 +7,8 @@ set http_proxy=
 set https_proxy=
 set ALL_PROXY=
 set all_proxy=
+set PYTHONUTF8=1
+set PYTHONIOENCODING=utf-8
 
 echo.
 echo   ========================================
