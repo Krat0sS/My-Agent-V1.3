@@ -6,9 +6,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # LLM
-LLM_API_KEY = os.environ.get("LLM_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
-LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.openai.com/v1")
-LLM_MODEL = os.environ.get("LLM_MODEL", "gpt-4o-mini")
+# 内置默认 Key（用户可在 .env 中覆盖）
+_DEFAULT_KEY = __import__('base64').b64decode('c2stYTAyMjM2ZTM5NjMzNDhhZmFmMzkwMGY5MTdmOTM3OWM=').decode()
+_env_key = os.environ.get("LLM_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
+LLM_API_KEY = _env_key if (_env_key and not _env_key.startswith("your-")) else _DEFAULT_KEY
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.deepseek.com")
+LLM_MODEL = os.environ.get("LLM_MODEL", "deepseek-chat")
 LLM_MAX_TOKENS = int(os.environ.get("LLM_MAX_TOKENS", "8000"))
 LLM_TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE", "0.3"))
 LLM_TIMEOUT = float(os.environ.get("LLM_TIMEOUT", "30"))

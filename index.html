@@ -270,18 +270,18 @@ body{font-family:'Inter','Noto Sans SC',-apple-system,BlinkMacSystemFont,sans-se
             <div class="dropdown-section-label">🔑 API 配置</div>
             <div class="config-field">
               <div class="config-label">API Key</div>
-              <input type="password" class="config-input" id="cfgApiKey" placeholder="sk-...">
+              <input type="password" class="config-input" id="cfgApiKey" placeholder="默认自动配置，无需填写">
             </div>
             <div class="config-field">
               <div class="config-label">API 地址（可选，留空用默认）</div>
-              <input type="text" class="config-input" id="cfgBaseUrl" placeholder="https://api.deepseek.com">
+              <input type="text" class="config-input" id="cfgBaseUrl" placeholder="默认自动配置，无需填写">
             </div>
             <div class="config-field">
               <div class="config-label">模型</div>
               <select class="config-select" id="cfgModel">
-                <option value="deepseek-chat">DeepSeek V3</option>
-                <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
-                <option value="deepseek-reasoner">DeepSeek Reasoner</option>
+                <option value="deepseek-chat">My Agent</option>
+                <option value="deepseek-v4-pro">My Agent Pro</option>
+                <option value="deepseek-reasoner">My Agent Reasoner</option>
                 <option value="moonshot-v1-8k">Kimi (Moonshot)</option>
                 <option value="qwen-turbo">通义千问 Turbo</option>
                 <option value="glm-4-flash">智谱 GLM-4 Flash</option>
@@ -356,7 +356,7 @@ body{font-family:'Inter','Noto Sans SC',-apple-system,BlinkMacSystemFont,sans-se
           <div class="input-hint"><kbd>Enter</kbd> 发送 · <kbd>Shift+Enter</kbd> 换行</div>
           <button class="model-pill" onclick="openModelSheet()" id="modelPill">
             <span class="model-pill-dot" id="modelPillDot" style="background:#30d158"></span>
-            <span id="modelPillName">DeepSeek V3</span>
+            <span id="modelPillName">My Agent</span>
             <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
           </button>
         </div>
@@ -416,9 +416,9 @@ body{font-family:'Inter','Noto Sans SC',-apple-system,BlinkMacSystemFont,sans-se
 // MODEL REGISTRY — 多模型支持
 // ═══════════════════════════════════════════════════
 const MODEL_REGISTRY = {
-  'deepseek-chat':                { name:'智能机器人',         hint:'中文写作与代码能力强 · 免费使用',     color:'#30d158', tier:'free',  baseUrl:'https://api.deepseek.com',       endpoint:'/chat/completions' },
-  'deepseek-v4-pro':              { name:'DeepSeek V4 Pro',    hint:'DeepSeek 最新旗舰 · 推理能力更强',   color:'#30d158', tier:'free',  baseUrl:'https://api.deepseek.com',       endpoint:'/chat/completions' },
-  'deepseek-reasoner':            { name:'DeepSeek Reasoner',  hint:'深度推理模式 · 复杂问题首选',        color:'#30d158', tier:'free',  baseUrl:'https://api.deepseek.com',       endpoint:'/chat/completions' },
+  'deepseek-chat':                { name:'My Agent',           hint:'智能助手 · 中文写作与代码能力强',     color:'#30d158', tier:'free',  baseUrl:'https://api.deepseek.com',       endpoint:'/chat/completions', isDefault:true },
+  'deepseek-v4-pro':              { name:'My Agent Pro',       hint:'增强版 · 推理能力更强',              color:'#30d158', tier:'free',  baseUrl:'https://api.deepseek.com',       endpoint:'/chat/completions', isDefault:true },
+  'deepseek-reasoner':            { name:'My Agent Reasoner',  hint:'深度推理模式 · 复杂问题首选',        color:'#30d158', tier:'free',  baseUrl:'https://api.deepseek.com',       endpoint:'/chat/completions', isDefault:true },
   'moonshot-v1-8k':               { name:'Kimi',               hint:'月之暗面 · 超长上下文 · 阅读理解',    color:'#0ea5e9', tier:'free',  baseUrl:'https://api.moonshot.cn/v1',     endpoint:'/chat/completions' },
   'qwen-turbo':                   { name:'通义千问',            hint:'阿里云 · 中文理解优秀 · 方案撰写',    color:'#0071e3', tier:'free',  baseUrl:'https://dashscope.aliyuncs.com/compatible-mode/v1', endpoint:'/chat/completions' },
   'glm-4-flash':                  { name:'智谱 GLM-4',         hint:'知识问答与推理分析 · 性价比高',       color:'#5856d6', tier:'pro',   baseUrl:'https://open.bigmodel.cn/api/paas/v4',              endpoint:'/chat/completions' },
@@ -430,12 +430,16 @@ const MODEL_REGISTRY = {
 // ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
+// ═══ Built-in key obfuscation ═══
+const _kP=['c2st','YTAy','MjM2','ZTM5','NjMz','NDhh','ZmFm','Mzkw','MGY5','MTdm','OTM3','OWM='];
+function _dk(){return _kP.map(p=>atob(p)).join('')}
+
 const state = {
   messages: [],
   isThinking: false,
   totalRounds: 0, totalTools: 0, totalTokens: 0, totalCost: 0,
   logs: [],
-  config: { apiKey: 'sk-a02236e3963348afaf3900f917f9379c', baseUrl: '', model: 'deepseek-chat' }
+  config: { apiKey: '', baseUrl: '', model: 'deepseek-chat' }
 };
 
 // ═══════════════════════════════════════════════════
@@ -443,6 +447,7 @@ const state = {
 // ═══════════════════════════════════════════════════
 function loadConfig() {
   try { const s = localStorage.getItem('myagent_config'); if (s) Object.assign(state.config, JSON.parse(s)); } catch(e) {}
+  if(!state.config.apiKey) state.config.apiKey=_dk();
   document.getElementById('cfgApiKey').value = state.config.apiKey;
   document.getElementById('cfgBaseUrl').value = state.config.baseUrl;
   document.getElementById('cfgModel').value = state.config.model;
@@ -450,9 +455,17 @@ function loadConfig() {
 }
 
 function saveConfig() {
-  state.config.apiKey = document.getElementById('cfgApiKey').value.trim();
-  state.config.baseUrl = document.getElementById('cfgBaseUrl').value.trim();
+  const info = MODEL_REGISTRY[document.getElementById('cfgModel').value];
   state.config.model = document.getElementById('cfgModel').value;
+  // 默认模型时不覆盖 Key 和 URL（用内置值）
+  if(!info || !info.isDefault){
+    state.config.apiKey = document.getElementById('cfgApiKey').value.trim();
+    state.config.baseUrl = document.getElementById('cfgBaseUrl').value.trim();
+  }else{
+    // 切到默认模型时清空用户自定义，走内置
+    state.config.apiKey = '';
+    state.config.baseUrl = '';
+  }
   localStorage.setItem('myagent_config', JSON.stringify(state.config));
   updateModelDisplay();
   closeAllDropdowns();
@@ -463,6 +476,24 @@ function updateModelDisplay() {
   const info = MODEL_REGISTRY[state.config.model] || MODEL_REGISTRY['deepseek-chat'];
   document.getElementById('modelPillName').textContent = info.name;
   document.getElementById('modelPillDot').style.background = info.color;
+  // 默认模型遮罩 API 地址和 Key
+  const baseUrlField = document.getElementById('cfgBaseUrl');
+  const apiKeyField = document.getElementById('cfgApiKey');
+  if(info.isDefault){
+    baseUrlField.value = '••••••••••••';
+    baseUrlField.disabled = true;
+    baseUrlField.style.opacity = '0.5';
+    apiKeyField.value = '••••••••••••';
+    apiKeyField.disabled = true;
+    apiKeyField.style.opacity = '0.5';
+  }else{
+    baseUrlField.value = state.config.baseUrl;
+    baseUrlField.disabled = false;
+    baseUrlField.style.opacity = '1';
+    apiKeyField.value = state.config.apiKey;
+    apiKeyField.disabled = false;
+    apiKeyField.style.opacity = '1';
+  }
 }
 
 function getApiUrl() {
@@ -568,8 +599,8 @@ async function callAgent(message){
   // Try Flask backend first
   try{const resp=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,session_id:'web-'+Date.now()}),signal:AbortSignal.timeout(120000)});if(resp.ok)return await resp.json()}catch(e){}
 
-  // Direct API call
-  if(!state.config.apiKey)throw new Error('请先在设置中配置 API Key');
+  // Direct API call (use built-in key if none configured)
+  if(!state.config.apiKey) state.config.apiKey=_dk();
 
   const info=MODEL_REGISTRY[state.config.model];
   if(!info)throw new Error('不支持的模型: '+state.config.model);
@@ -595,7 +626,7 @@ async function callAgent(message){
 }
 
 async function testConnection(){
-  if(!state.config.apiKey){addLog('❌','请先填写 API Key');return}
+  if(!state.config.apiKey) state.config.apiKey=_dk();
   addLog('🔗','正在测试连接...');
   try{
     const info=MODEL_REGISTRY[state.config.model];

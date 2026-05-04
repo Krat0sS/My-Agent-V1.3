@@ -1,58 +1,75 @@
 @echo off
+chcp 65001 >nul 2>&1
 cd /d "%~dp0"
-set HTTP_PROXY=
-set HTTPS_PROXY=
-set http_proxy=
-set https_proxy=
-set ALL_PROXY=
-set all_proxy=
 
-set PYTHON_CMD=
+echo.
+echo   My Agent - Environment Setup
+echo   ============================
+echo.
+
+REM ═══ Find Python ═══
+set "PY_CMD="
+
 py -3 --version >nul 2>&1
-if %errorlevel% equ 0 (
-    set PYTHON_CMD=py -3
-    goto :found
-)
+if %errorlevel% equ 0 ( set "PY_CMD=py -3" & goto :found )
+
 python --version >nul 2>&1
 if %errorlevel% equ 0 (
-    set PYTHON_CMD=python
-    goto :found
-)
-python3 --version >nul 2>&1
-if %errorlevel% equ 0 (
-    set PYTHON_CMD=python3
-    goto :found
+    python -c "import sys" >nul 2>&1
+    if %errorlevel% equ 0 ( set "PY_CMD=python" & goto :found )
 )
 
-echo Python not found.
-echo Install Python 3.10+ from https://www.python.org/downloads/
-echo Make sure to check "Add Python to PATH".
+python3 --version >nul 2>&1
+if %errorlevel% equ 0 ( set "PY_CMD=python3" & goto :found )
+
+echo   [ERROR] Python not found!
+echo   Install Python 3.10+ from https://www.python.org/downloads/
+echo   Make sure to check "Add Python to PATH".
 pause
 exit /b 1
 
 :found
-echo Found Python: %PYTHON_CMD%
-%PYTHON_CMD% --version
+echo   Python: %PY_CMD%
+%PY_CMD% --version
+echo.
 
+REM ═══ Create venv ═══
 if not exist "venv\Scripts\activate.bat" (
-    echo Creating venv ...
-    %PYTHON_CMD% -m venv venv
+    echo   Creating venv ...
+    %PY_CMD% -m venv venv
     if %errorlevel% neq 0 (
-        echo Failed to create venv.
+        echo   [ERROR] Failed to create venv!
         pause
         exit /b 1
     )
+    echo   [OK] venv created.
+) else (
+    echo   venv already exists.
 )
 
+REM ═══ Activate & Install ═══
 call venv\Scripts\activate.bat
-echo Installing dependencies ...
-pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com -q
+
+echo   Installing dependencies ...
+pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
 if %errorlevel% neq 0 (
-    pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/ --trusted-host pypi.tuna.tsinghua.edu.cn -q
+    echo   [WARN] Trying Tsinghua mirror ...
+    pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/ --trusted-host pypi.tuna.tsinghua.edu.cn
 )
+if %errorlevel% neq 0 (
+    echo   [ERROR] pip install failed! Check network.
+    pause
+    exit /b 1
+)
+
+REM ═══ Create .env ═══
 if not exist ".env" (
     if exist ".env.example" copy .env.example .env >nul
 )
+
 echo.
-echo Done! Now run start.bat
+echo   ============================
+echo   Setup complete!
+echo   Run 启动.bat to start My Agent.
+echo   ============================
 pause
