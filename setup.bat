@@ -7,7 +7,7 @@ echo   My Agent - Environment Setup
 echo   ============================
 echo.
 
-REM ═══ Find Python ═══
+REM === Find Python ===
 set "PY_CMD="
 
 py -3 --version >nul 2>&1
@@ -33,7 +33,7 @@ echo   Python: %PY_CMD%
 %PY_CMD% --version
 echo.
 
-REM ═══ Create venv ═══
+REM === Create venv ===
 if not exist "venv\Scripts\activate.bat" (
     echo   Creating venv ...
     %PY_CMD% -m venv venv
@@ -47,7 +47,7 @@ if not exist "venv\Scripts\activate.bat" (
     echo   venv already exists.
 )
 
-REM ═══ Activate & Install ═══
+REM === Activate and Install ===
 call venv\Scripts\activate.bat
 
 echo   Installing dependencies ...
@@ -62,7 +62,7 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-REM ═══ Create .env ═══
+REM === Create .env ===
 if not exist ".env" (
     if exist ".env.example" copy .env.example .env >nul
 )

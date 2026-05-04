@@ -9,26 +9,22 @@ set ALL_PROXY=
 set all_proxy=
 
 echo.
-echo   ╔══════════════════════════════════════╗
-echo   ║         My Agent v1.3.3              ║
-echo   ║    Personal Meta-OS Agent            ║
-echo   ╚══════════════════════════════════════╝
+echo   ========================================
+echo          My Agent v1.3.3
+echo   ========================================
 echo.
 
-REM ═══════ Step 1: Find Python ═══════
+REM === Step 1: Find Python ===
 set "PY_CMD="
 
-REM Try py launcher first
 py -3 --version >nul 2>&1
 if %errorlevel% equ 0 (
     set "PY_CMD=py -3"
     goto :python_found
 )
 
-REM Try python (skip Microsoft Store alias)
 python --version >nul 2>&1
 if %errorlevel% equ 0 (
-    REM Check if it's the real Python, not the Store alias
     python -c "import sys" >nul 2>&1
     if %errorlevel% equ 0 (
         set "PY_CMD=python"
@@ -36,14 +32,12 @@ if %errorlevel% equ 0 (
     )
 )
 
-REM Try python3
 python3 --version >nul 2>&1
 if %errorlevel% equ 0 (
     set "PY_CMD=python3"
     goto :python_found
 )
 
-REM Python not found
 echo   [ERROR] Python not found!
 echo.
 echo   Please install Python 3.10+ from:
@@ -59,7 +53,7 @@ echo   [OK] Python found: %PY_CMD%
 %PY_CMD% --version
 echo.
 
-REM ═══════ Step 2: Create venv if needed ═══════
+REM === Step 2: Create venv if needed ===
 if exist "venv\Scripts\activate.bat" goto :venv_ready
 
 echo   [1/3] Creating virtual environment ...
@@ -67,8 +61,7 @@ echo   [1/3] Creating virtual environment ...
 if %errorlevel% neq 0 (
     echo.
     echo   [ERROR] Failed to create venv!
-    echo   Try running: %PY_CMD% -m venv venv
-    echo   manually to see the error.
+    echo   Try running manually: %PY_CMD% -m venv venv
     pause
     exit /b 1
 )
@@ -76,7 +69,7 @@ echo   [OK] venv created.
 echo.
 
 :venv_ready
-REM ═══════ Step 3: Activate venv ═══════
+REM === Step 3: Activate venv ===
 call venv\Scripts\activate.bat
 if %errorlevel% neq 0 (
     echo   [ERROR] Failed to activate venv!
@@ -84,8 +77,7 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-REM ═══════ Step 4: Install dependencies (only if needed) ═══════
-REM Check if flask is already installed
+REM === Step 4: Install dependencies if needed ===
 python -c "import flask" >nul 2>&1
 if %errorlevel% equ 0 goto :skip_install
 
@@ -101,8 +93,7 @@ if %errorlevel% neq 0 (
 )
 if %errorlevel% neq 0 (
     echo.
-    echo   [ERROR] pip install failed!
-    echo   Check your network connection.
+    echo   [ERROR] pip install failed! Check your network.
     pause
     exit /b 1
 )
@@ -114,23 +105,23 @@ goto :after_install
 echo   [2/3] Dependencies already installed, skipping.
 
 :after_install
-REM ═══════ Step 5: Create .env if needed ═══════
+REM === Step 5: Create .env if needed ===
 if not exist ".env" (
     if exist ".env.example" (
         copy .env.example .env >nul
-        echo   [OK] .env created from template.
+        echo   [OK] .env created.
     )
 )
 
-REM ═══════ Step 6: Launch! ═══════
+REM === Step 6: Launch ===
 echo.
 echo   [3/3] Starting My Agent ...
 echo.
-echo   ╔══════════════════════════════════════╗
-echo   ║  My Agent is running!                ║
-echo   ║  Open: http://localhost:8080          ║
-echo   ║  Press Ctrl+C to stop.               ║
-echo   ╚══════════════════════════════════════╝
+echo   ========================================
+echo   My Agent is running!
+echo   Open: http://localhost:8080
+echo   Press Ctrl+C to stop.
+echo   ========================================
 echo.
 
 start "" "http://localhost:8080"
