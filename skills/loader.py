@@ -30,6 +30,9 @@ _SYNONYMS = [
     {"打开", "启动", "open", "launch", "start"},
     {"截图", "截屏", "screenshot"},
     {"浏览", "browser", "浏览"},
+    {"PDF", "pdf", "Word", "word", "Excel", "excel", "PPT", "ppt", "文档格式"},
+    {"AI", "人工智能", "大模型", "LLM", "GPT", "ChatGPT", "深度学习", "机器学习"},
+    {"代码", "编程", "程序", "code", "programming", "开发"},
 ]
 
 

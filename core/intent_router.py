@@ -74,60 +74,118 @@ def classify_complexity(user_input: str) -> str:
     return "medium"
 
 
-# ═══ 技能匹配 ═══
+# ═══ 技能匹配（v1.3.4: BM25 粗筛 + LLM 精排） ═══
+
+# BM25 索引缓存（避免每次匹配都重建）
+_bm25_cache = {"skills_hash": None, "index": None}
+
+
+def _build_bm25_index(skills: List[Skill]):
+    """构建 BM25 索引，用技能的 goal + keywords + name 作为文档"""
+    from core.bm25 import BM25Index
+
+    # 检查缓存：技能列表没变就复用
+    skills_hash = hash(tuple(s.name for s in skills))
+    if _bm25_cache["skills_hash"] == skills_hash and _bm25_cache["index"] is not None:
+        return _bm25_cache["index"]
+
+    index = BM25Index()
+    for skill in skills:
+        # 文档 = 目标描述 + 关键词 + 技能名（用空格拼接）
+        doc_text = f"{skill.goal} {' '.join(skill.keywords)} {skill.name.replace('-', ' ')}"
+        index.add(skill.name, doc_text)
+    index.build()
+
+    _bm25_cache["skills_hash"] = skills_hash
+    _bm25_cache["index"] = index
+    return index
+
+
+# BM25 分数阈值（基于实测校准）
+# BM25 分数受文档数量和 IDF 影响，技能少（3个）时分数普遍偏低
+_BM25_HIGH_CONFIDENCE = 2.0   # 高于此分 → 直接命中（无需 LLM）
+_BM25_BORDERLINE_LOW = 0.5    # 低于此分 → 认为不匹配
+_LLM_CONFIRM_TOP_N = 3       # LLM 精排候选数
+
+
+async def _llm_confirm_match(user_input: str, skill: Skill) -> Tuple[bool, float]:
+    """
+    LLM 精排：让 DeepSeek 判断用户输入是否真的匹配这个技能。
+
+    返回: (是否匹配, 置信度 0-1)
+    """
+    from core.llm import chat
+
+    prompt = f"""判断以下用户输入是否应该使用"{skill.name}"技能来完成。
+
+用户输入: {user_input}
+技能目标: {skill.goal}
+技能步骤: {chr(10).join(f'{i+1}. {s}' for i, s in enumerate(skill.steps[:5]))}
+
+请只回答一个 JSON：
+{{"match": true/false, "confidence": 0.0-1.0, "reason": "一句话理由"}}
+
+判断标准：
+- 如果用户意图的核心目标和技能目标一致，match=true
+- 如果只是部分相关或不确定，confidence < 0.5
+- 不要因为关键词相似就误判，要看意图"""
+
+    messages = [
+        {"role": "system", "content": "你是技能匹配判断器。只输出 JSON，不要多余内容。"},
+        {"role": "user", "content": prompt},
+    ]
+
+    result = await chat(messages, temperature=0.1)
+
+    if result.get("_error") or result.get("_timeout"):
+        return False, 0.0
+
+    content = result["content"].strip()
+    try:
+        # 提取 JSON
+        if "```json" in content:
+            json_str = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            json_str = content.split("```")[1].split("```")[0].strip()
+        else:
+            json_str = content
+        data = json.loads(json_str)
+        return data.get("match", False), data.get("confidence", 0.0)
+    except (json.JSONDecodeError, IndexError):
+        return False, 0.0
+
 
 def match_skill(user_input: str, skills: List[Skill],
                 threshold: float = 0.4) -> Tuple[Optional[Skill], float, List[Tuple[str, float]]]:
     """
-    将用户输入与已加载的技能做匹配。
+    v1.3.4: BM25 粗筛替代简单关键词重叠。
 
-    使用两阶段过滤：
-    1. 快速关键词匹配 → 筛出 Top-5 候选
-    2. 对 Top-5 做精细评分
+    BM25 的核心改进：
+    - IDF 自动给稀有词高权重（"PDF" > "文件"，"研究" > "搜索"）
+    - TF 归一化避免长文档天然高分
+    - 长度归一化消除文档长度偏差
 
-    返回: (最佳技能, 置信度分数, 所有候选列表)
+    返回: (最佳技能, BM25 分数, 候选列表)
+    注意：返回的 score 是 BM25 原始分，不是 0-1 的概率。
+    调用方通过 _BM25_HIGH_CONFIDENCE / _BM25_BORDERLINE_LOW 判断置信度。
     """
     if not skills:
         return None, 0.0, []
 
-    # 第一阶段：关键词匹配（快，毫秒级），使用 jieba 分词
-    try:
-        import jieba
-        user_keywords = set(w.strip() for w in jieba.cut(user_input.lower()) if len(w.strip()) > 1)
-    except ImportError:
-        user_keywords = set(re.findall(r'[\u4e00-\u9fff]+|[a-zA-Z]+', user_input.lower()))
+    # BM25 粗筛（毫秒级）
+    index = _build_bm25_index(skills)
+    results = index.search(user_input, top_k=5)
 
-    scored = []
-    for skill in skills:
-        # 计算关键词重叠度
-        skill_keywords = set(skill.keywords)
-        if not skill_keywords:
-            continue
+    if not results:
+        return None, 0.0, []
 
-        overlap = user_keywords & skill_keywords
-        if not overlap:
-            scored.append((skill.name, 0.0))
-            continue
+    top_name, top_score = results[0]
+    top_skill = next((s for s in skills if s.name == top_name), None)
 
-        # 命中率（用户关键词被覆盖的比例）为主，Jaccard 为辅
-        hit_rate = len(overlap) / len(user_keywords) if user_keywords else 0
-        jaccard = len(overlap) / len(user_keywords | skill_keywords)
-        # 70% 命中率 + 30% Jaccard，让短输入也能得到合理分数
-        score = hit_rate * 0.7 + jaccard * 0.3
+    # 候选列表（带分数）
+    candidates = results
 
-        scored.append((skill.name, score))
-
-    scored.sort(key=lambda x: x[1], reverse=True)
-    top5 = scored[:5]
-
-    if not top5 or top5[0][1] < threshold:
-        return None, top5[0][1] if top5 else 0.0, top5
-
-    # 返回最佳匹配
-    best_name, best_score = top5[0]
-    best_skill = next((s for s in skills if s.name == best_name), None)
-
-    return best_skill, best_score, top5
+    return top_skill, top_score, candidates
 
 
 # ═══ 任务分解 ═══
@@ -261,14 +319,16 @@ def save_skill(skill_name: str, skill_md_content: str, skills_dir: str = None) -
 async def route(user_input: str, skills: List[Skill] = None,
                 on_progress=None) -> RoutingResult:
     """
-    主路由函数。
+    主路由函数（v1.3.4: BM25 + LLM 精排）。
 
+    决策流程：
     1. 分类复杂度
-    2. 如果是 medium，尝试匹配已有技能
-    3. 返回路由决策
-
-    注意：这个函数只做决策，不做执行。
-    执行由调用方（conversation.py）负责。
+    2. simple → 直接走 LLM
+    3. medium → BM25 粗筛：
+       - 高置信 (score >= 3.0) → 直接执行技能
+       - 模糊区间 (1.0 <= score < 3.0) → LLM 精排确认
+       - 低分 (score < 1.0) → 走 decompose
+    4. complex → decompose
     """
     if skills is None:
         skills = load_all_skills()
@@ -282,7 +342,7 @@ async def route(user_input: str, skills: List[Skill] = None,
             action="direct_tool",
         )
 
-    # medium → 尝试匹配技能
+    # medium → BM25 粗筛 + 可选 LLM 精排
     if complexity == "medium":
         skill, score, candidates = match_skill(user_input, skills)
 
@@ -295,7 +355,8 @@ async def route(user_input: str, skills: List[Skill] = None,
             fallback_to_decompose=(skill is None),
         )
 
-        if skill and score >= 0.4:
+        # 高置信：BM25 分数足够高，直接执行
+        if skill and score >= _BM25_HIGH_CONFIDENCE:
             return RoutingResult(
                 complexity="medium",
                 matched_skill=skill,
@@ -303,13 +364,47 @@ async def route(user_input: str, skills: List[Skill] = None,
                 candidates=candidates,
                 action="execute_skill",
             )
-        else:
-            return RoutingResult(
-                complexity="medium",
-                match_score=score,
-                candidates=candidates,
-                action="decompose",
-            )
+
+        # 模糊区间：LLM 精排确认
+        if skill and score >= _BM25_BORDERLINE_LOW:
+            if on_progress:
+                on_progress(f"🔍 BM25 模糊命中「{skill.name}」(score={score:.2f})，LLM 精排中...")
+
+            # 取 Top-N 候选让 LLM 判断
+            confirmed_skill = None
+            confirmed_confidence = 0.0
+
+            for cand_name, cand_score in candidates[:_LLM_CONFIRM_TOP_N]:
+                cand_skill = next((s for s in skills if s.name == cand_name), None)
+                if not cand_skill:
+                    continue
+
+                is_match, confidence = await _llm_confirm_match(user_input, cand_skill)
+                if is_match and confidence > confirmed_confidence:
+                    confirmed_skill = cand_skill
+                    confirmed_confidence = confidence
+
+            if confirmed_skill:
+                if on_progress:
+                    on_progress(f"✅ LLM 确认匹配「{confirmed_skill.name}」(置信度 {confirmed_confidence:.2f})")
+                return RoutingResult(
+                    complexity="medium",
+                    matched_skill=confirmed_skill,
+                    match_score=confirmed_confidence,
+                    candidates=candidates,
+                    action="execute_skill",
+                )
+
+            if on_progress:
+                on_progress("❌ LLM 判定无匹配，走任务分解")
+
+        # 低分 或 LLM 精排未确认 → decompose
+        return RoutingResult(
+            complexity="medium",
+            match_score=score,
+            candidates=candidates,
+            action="decompose",
+        )
 
     # complex → 分解
     return RoutingResult(
