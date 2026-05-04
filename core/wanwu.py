@@ -63,58 +63,41 @@ class PromotionCandidate:
 # 乾坤识别
 # ═══════════════════════════════════════════════════════════
 
-# 冷启动启发式：技能名 → 默认角色
-_QIAN_KEYWORDS = ['search', 'research', '搜索', '查找', '查询', '获取', '下载', '抓取']
-_KUN_KEYWORDS = ['organize', '整理', '创建', '写入', '保存', '归档', '生成', '导出']
-
 
 def identify_qian_kun(available_skills: List[str]) -> List[Tuple[str, str]]:
     """
     从候选技能中识别所有可能的乾坤配对。
 
-    优先从 skill_pairs 数据驱动，冷启动用启发式。
+    优先从 skill_pairs 数据驱动（成功率>0.5）。
+    冷启动期（数据<10条）：按注册顺序配对，第一个=乾，第二个=坤。
+    不用关键词猜测，简单可靠。
+
     返回: [(qian, kun), ...] 的配对列表
     """
     if len(available_skills) < 2:
         return []
 
-    pairs = []
-
     # 尝试从 skill_pairs 获取数据驱动的配对
     all_pairs = log.get_all_skill_pairs()
     data_driven = set()
+    total_data_points = sum(p.get('total_calls', 0) for p in all_pairs)
 
-    for pair in all_pairs:
-        a, b = pair['skill_a'], pair['skill_b']
-        if a in available_skills and b in available_skills:
-            # skill_a 常作为发起者 → 候选乾
-            # skill_b 常作为承载者 → 候选坤
-            if pair['success_rate'] > 0.5:
-                data_driven.add((a, b))
+    # 数据充足时（≥10条真实调用）用数据驱动
+    if total_data_points >= 10:
+        for pair in all_pairs:
+            a, b = pair['skill_a'], pair['skill_b']
+            if a in available_skills and b in available_skills:
+                if pair['success_rate'] > 0.5:
+                    data_driven.add((a, b))
 
-    if data_driven:
-        return list(data_driven)
+        if data_driven:
+            return list(data_driven)
 
-    # 冷启动：启发式配对
-    qian_candidates = []
-    kun_candidates = []
-
-    for skill in available_skills:
-        skill_lower = skill.lower()
-        if any(kw in skill_lower for kw in _QIAN_KEYWORDS):
-            qian_candidates.append(skill)
-        elif any(kw in skill_lower for kw in _KUN_KEYWORDS):
-            kun_candidates.append(skill)
-        else:
-            # 无法分类的，两边都可以当
-            qian_candidates.append(skill)
-            kun_candidates.append(skill)
-
-    # 生成配对
-    for q in qian_candidates:
-        for k in kun_candidates:
-            if q != k:
-                pairs.append((q, k))
+    # 冷启动：按注册顺序配对（简单可靠，不会因关键词匹配出错）
+    pairs = []
+    for i, qian in enumerate(available_skills):
+        for kun in available_skills[i + 1:]:
+            pairs.append((qian, kun))
 
     return pairs
 

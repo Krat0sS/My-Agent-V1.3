@@ -10,9 +10,11 @@
 - 结果写入 diagnosis_log 表
 """
 import time
+import re
 from dataclasses import dataclass
 from typing import List, Optional
 from data import execution_log as log
+from tools.registry import registry
 
 
 # ═══════════════════════════════════════════════════════════
@@ -91,21 +93,7 @@ def _assess_inner(recent_calls: List[dict]) -> tuple:
 
     返回: (state, score)
     """
-    if not recent_calls:
-        # 没有历史数据，默认为"young_yang"（正常但未经验证）
-        return 'young_yang', 0.0
-
-    weight = 1.0
-    total_score = 0.0
-    max_possible = 0.0
-
-    for call in reversed(recent_calls[:10]):
-        success = call.get('success', 1)
-        total_score += (1 if success else -1) * weight
-        max_possible += weight
-        weight *= 0.7
-
-    score = total_score / max_possible if max_possible > 0 else 0.0
+    score = calculate_inner_score(recent_calls)
 
     if score > 0.6:
         state = 'old_yang'      # 巅峰：连续成功，权重集中
@@ -119,16 +107,69 @@ def _assess_inner(recent_calls: List[dict]) -> tuple:
     return state, score
 
 
+def calculate_inner_score(recent_calls: List[dict]) -> float:
+    """
+    计算内卦原始分数（公共接口，供 change_engine 等模块复用）。
+
+    指数衰减加权：最近的成败权重最大，每往前一轮衰减 30%。
+    返回: [-1.0, 1.0]
+    """
+    if not recent_calls:
+        return 0.0  # 无历史数据，默认中立
+
+    weight = 1.0
+    total_score = 0.0
+    max_possible = 0.0
+
+    for call in reversed(recent_calls[:10]):
+        success = call.get('success', 1)
+        total_score += (1 if success else -1) * weight
+        max_possible += weight
+        weight *= 0.7
+
+    return total_score / max_possible if max_possible > 0 else 0.0
+
+
 # ═══════════════════════════════════════════════════════════
 # 外卦判定：任务环境状态
 # ═══════════════════════════════════════════════════════════
 
-# 动作关键词（用于判断指令明确度）
-ACTION_VERBS = [
-    '打开', '搜索', '整理', '创建', '删除', '发送', '分析', '查找',
-    '备份', '清理', '关闭', '下载', '上传', '复制', '移动', '重命名',
-    '编写', '运行', '安装', '配置', '检查', '监控', '导出', '导入'
-]
+# 动作关键词（从 ToolRegistry 动态生成 + 兜底静态表）
+_ACTION_VERBS_CACHE = None
+
+def _get_action_verbs() -> List[str]:
+    """从 ToolRegistry 动态构建动词表，自动覆盖所有已注册工具"""
+    global _ACTION_VERBS_CACHE
+    if _ACTION_VERBS_CACHE is not None:
+        return _ACTION_VERBS_CACHE
+
+    verbs = set()
+    try:
+        for tool in registry.get_all():
+            desc = tool.description or ""
+            # 从描述中提取第一个中文动词（2-4字）
+            match = re.match(r'^([\u4e00-\u9fff]{2,4})', desc.strip())
+            if match:
+                verbs.add(match.group(1))
+    except Exception:
+        pass
+
+    # 兜底：如果动态提取失败或结果太少，用静态表补充
+    if len(verbs) < 10:
+        verbs.update([
+            '打开', '搜索', '整理', '创建', '删除', '发送', '分析', '查找',
+            '备份', '清理', '关闭', '下载', '上传', '复制', '移动', '重命名',
+            '编写', '运行', '安装', '配置', '检查', '监控', '导出', '导入'
+        ])
+
+    _ACTION_VERBS_CACHE = list(verbs)
+    return _ACTION_VERBS_CACHE
+
+
+def _refresh_action_verbs():
+    """工具注册变更后调用，刷新缓存"""
+    global _ACTION_VERBS_CACHE
+    _ACTION_VERBS_CACHE = None
 
 # 模糊指令特征
 VAGUE_PATTERNS = [
@@ -160,8 +201,8 @@ def _assess_clarity(user_input: str) -> float:
     elif len(text) > 10:
         score += 0.1  # 足够长，大概率有具体内容
 
-    # 层 2：动作动词
-    has_verb = any(v in text for v in ACTION_VERBS)
+    # 层 2：动作动词（从 ToolRegistry 动态生成）
+    has_verb = any(v in text for v in _get_action_verbs())
     if has_verb:
         score += 0.2
 

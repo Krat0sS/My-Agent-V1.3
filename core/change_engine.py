@@ -17,6 +17,7 @@ import json
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
 from data import execution_log as log
+from core.taiji import calculate_inner_score
 
 
 # ═══════════════════════════════════════════════════════════
@@ -93,13 +94,10 @@ def assess_yao(tool_name: str, args: dict, result: str,
 
     # ═══ 从这里开始，success=False ═══
 
-    # 统计最近同一工具的失败次数
-    recent_failures = sum(
-        1 for c in recent_calls
-        if not c.get('success', 1) and c.get('tool_name') == tool_name
-    )
+    # 用 taiji 的指数衰减加权评估整体状态（而非简单计数）
+    inner_score = calculate_inner_score(recent_calls)
 
-    # 检查是否同参数连续失败
+    # 同参数连续失败检查（精确匹配，不受衰减影响）
     same_args_failures = _count_same_args_failures(tool_name, args, recent_calls)
 
     # ═══ 老阴判定：同参数连续失败≥2次 ═══
@@ -115,8 +113,8 @@ def assess_yao(tool_name: str, args: dict, result: str,
                     f'已标记本回合不可用。建议回滚到安全检查点，请提供新指令。'
         )
 
-    # ═══ 老阴判定：同一工具连续失败≥3次（即使参数不同）═══
-    if recent_failures >= 3:
+    # ═══ 老阴判定：内卦分数极低（指数衰减加权后仍为危机）═══
+    if inner_score < -0.2:
         return YaoResult(
             yao_type='old_yin',
             recovery_action='rollback',
@@ -124,8 +122,8 @@ def assess_yao(tool_name: str, args: dict, result: str,
             should_rollback=True,
             should_ask_user=True,
             should_deposit=False,
-            message=f'工具 {tool_name} 近期已失败 {recent_failures} 次，'
-                    f'建议暂停使用该工具，请提供替代方案。'
+            message=f'工具 {tool_name} 近期整体状态极差（评分 {inner_score:.2f}），'
+                    f'建议暂停使用，请提供替代方案。'
         )
 
     # ═══ 少阴判定：偶发失败，可以重试 ═══
