@@ -649,12 +649,12 @@ def get_peak_tasks(time_slot: str, day_type: str, min_confidence: float = 0.6) -
     conn = _get_conn()
     rows = conn.execute("""
         SELECT task_type, frequency,
-               ROUND(1.0 * frequency / SUM(frequency) OVER(), 3) as confidence
+               ROUND(1.0 * frequency / (SELECT SUM(frequency) FROM time_patterns WHERE time_slot=? AND day_type=?), 3) as confidence
         FROM time_patterns
         WHERE time_slot=? AND day_type=?
         HAVING confidence >= ?
         ORDER BY frequency DESC
-    """, (time_slot, day_type, min_confidence)).fetchall()
+    """, (time_slot, day_type, time_slot, day_type, min_confidence)).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
