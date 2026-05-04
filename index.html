@@ -1,0 +1,643 @@
+<!-- My Agent v1.3.3 — Personal Meta-OS Agent | Apple 风格可视化界面 | 多模型支持 -->
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Agent — Personal Meta-OS Agent</title>
+<meta name="description" content="个人元操作系统智能体 — 一句话操控你的电脑">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════
+   THEME SYSTEM — 6 themes
+   ═══════════════════════════════════════════════════ */
+[data-theme="light"] {
+  --bg-primary:#fafafa;--bg-secondary:#ffffff;--bg-tertiary:#f5f5f7;--bg-elevated:#ffffff;
+  --bg-glass:rgba(255,255,255,0.72);--text-primary:#1d1d1f;--text-secondary:#6e6e73;
+  --text-tertiary:#aeaeb2;--text-inverse:#ffffff;--accent:#0071e3;--accent-hover:#0077ED;
+  --accent-light:rgba(0,113,227,0.08);--accent-glow:rgba(0,113,227,0.15);
+  --success:#30d158;--warning:#ff9f0a;--danger:#ff453a;
+  --border:rgba(0,0,0,0.06);--border-hover:rgba(0,0,0,0.12);--border-active:rgba(0,113,227,0.4);
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.04);--shadow-md:0 4px 12px rgba(0,0,0,0.06);
+  --shadow-lg:0 8px 30px rgba(0,0,0,0.08);--shadow-xl:0 20px 60px rgba(0,0,0,0.1);
+  --shadow-glow:0 0 20px rgba(0,113,227,0.12);
+}
+[data-theme="dark"] {
+  --bg-primary:#0a0a0c;--bg-secondary:#141416;--bg-tertiary:#1c1c1e;--bg-elevated:#1c1c1e;
+  --bg-glass:rgba(20,20,22,0.85);--text-primary:#f5f5f7;--text-secondary:#a1a1a6;
+  --text-tertiary:#8e8e93;--text-inverse:#1d1d1f;--accent:#0a84ff;--accent-hover:#409cff;
+  --accent-light:rgba(10,132,255,0.12);--accent-glow:rgba(10,132,255,0.2);
+  --success:#30d158;--warning:#ff9f0a;--danger:#ff453a;
+  --border:rgba(255,255,255,0.08);--border-hover:rgba(255,255,255,0.15);--border-active:rgba(10,132,255,0.5);
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.3);--shadow-md:0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg:0 8px 30px rgba(0,0,0,0.5);--shadow-xl:0 20px 60px rgba(0,0,0,0.6);
+  --shadow-glow:0 0 20px rgba(10,132,255,0.15);
+}
+[data-theme="ocean"] {
+  --bg-primary:#0b1622;--bg-secondary:#0f1d2e;--bg-tertiary:#152538;--bg-elevated:#152538;
+  --bg-glass:rgba(15,29,46,0.88);--text-primary:#e8edf4;--text-secondary:#8fa3bf;
+  --text-tertiary:#5a7091;--text-inverse:#0b1622;--accent:#4dabf7;--accent-hover:#74c0fc;
+  --accent-light:rgba(77,171,247,0.12);--accent-glow:rgba(77,171,247,0.2);
+  --success:#51cf66;--warning:#fcc419;--danger:#ff6b6b;
+  --border:rgba(255,255,255,0.06);--border-hover:rgba(255,255,255,0.12);--border-active:rgba(77,171,247,0.5);
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.3);--shadow-md:0 4px 12px rgba(0,0,0,0.35);
+  --shadow-lg:0 8px 30px rgba(0,0,0,0.4);--shadow-xl:0 20px 60px rgba(0,0,0,0.5);
+  --shadow-glow:0 0 24px rgba(77,171,247,0.12);
+}
+[data-theme="sand"] {
+  --bg-primary:#faf8f5;--bg-secondary:#fffcf8;--bg-tertiary:#f5f0e8;--bg-elevated:#fffcf8;
+  --bg-glass:rgba(255,252,248,0.8);--text-primary:#2c2418;--text-secondary:#8a7e6e;
+  --text-tertiary:#b8ad9e;--text-inverse:#fffcf8;--accent:#c47d2b;--accent-hover:#d4923e;
+  --accent-light:rgba(196,125,43,0.08);--accent-glow:rgba(196,125,43,0.15);
+  --success:#5a9e3a;--warning:#d4923e;--danger:#c44b3a;
+  --border:rgba(44,36,24,0.06);--border-hover:rgba(44,36,24,0.12);--border-active:rgba(196,125,43,0.4);
+  --shadow-sm:0 1px 2px rgba(44,36,24,0.04);--shadow-md:0 4px 12px rgba(44,36,24,0.06);
+  --shadow-lg:0 8px 30px rgba(44,36,24,0.08);--shadow-xl:0 20px 60px rgba(44,36,24,0.1);
+  --shadow-glow:0 0 20px rgba(196,125,43,0.1);
+}
+[data-theme="mint"] {
+  --bg-primary:#f2f9f6;--bg-secondary:#f8fcfa;--bg-tertiary:#e8f4ee;--bg-elevated:#f8fcfa;
+  --bg-glass:rgba(248,252,250,0.8);--text-primary:#1a2e24;--text-secondary:#5e8a74;
+  --text-tertiary:#94bba8;--text-inverse:#f8fcfa;--accent:#2d9d6e;--accent-hover:#3ab882;
+  --accent-light:rgba(45,157,110,0.08);--accent-glow:rgba(45,157,110,0.15);
+  --success:#2d9d6e;--warning:#d4a843;--danger:#d45a43;
+  --border:rgba(26,46,36,0.06);--border-hover:rgba(26,46,36,0.12);--border-active:rgba(45,157,110,0.4);
+  --shadow-sm:0 1px 2px rgba(26,46,36,0.04);--shadow-md:0 4px 12px rgba(26,46,36,0.06);
+  --shadow-lg:0 8px 30px rgba(26,46,36,0.08);--shadow-xl:0 20px 60px rgba(26,46,36,0.1);
+  --shadow-glow:0 0 20px rgba(45,157,110,0.12);
+}
+[data-theme="lavender"] {
+  --bg-primary:#f6f2fa;--bg-secondary:#faf8fc;--bg-tertiary:#ede6f5;--bg-elevated:#faf8fc;
+  --bg-glass:rgba(250,248,252,0.8);--text-primary:#241830;--text-secondary:#7e6e94;
+  --text-tertiary:#b0a3c0;--text-inverse:#faf8fc;--accent:#8b5cf6;--accent-hover:#a78bfa;
+  --accent-light:rgba(139,92,246,0.08);--accent-glow:rgba(139,92,246,0.15);
+  --success:#34d399;--warning:#fbbf24;--danger:#f87171;
+  --border:rgba(36,24,48,0.06);--border-hover:rgba(36,24,48,0.12);--border-active:rgba(139,92,246,0.4);
+  --shadow-sm:0 1px 2px rgba(36,24,48,0.04);--shadow-md:0 4px 12px rgba(36,24,48,0.06);
+  --shadow-lg:0 8px 30px rgba(36,24,48,0.08);--shadow-xl:0 20px 60px rgba(36,24,48,0.1);
+  --shadow-glow:0 0 20px rgba(139,92,246,0.12);
+}
+
+/* ═══ RESET & BASE ═══ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{font-size:14px;-webkit-font-smoothing:antialiased}
+body{font-family:'Inter','Noto Sans SC',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg-primary);color:var(--text-primary);overflow:hidden;height:100vh;transition:background .35s ease,color .35s ease}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border-hover);border-radius:5px}
+
+/* ═══ LAYOUT ═══ */
+.app{display:grid;grid-template-columns:240px 1fr 280px;grid-template-rows:54px 1fr;height:100vh;gap:0}
+
+/* ═══ HEADER ═══ */
+.header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:var(--bg-glass);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border);z-index:100;transition:background .35s ease,border-color .35s ease}
+.header-left{display:flex;align-items:center;gap:12px}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1.05rem;letter-spacing:-.02em;user-select:none}
+.logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),#5856d6);border-radius:9px;display:flex;align-items:center;justify-content:center;color:white;font-size:14px;font-weight:700}
+.header-center{display:flex;align-items:center;gap:2px}
+.tab-btn{padding:5px 14px;border-radius:8px;border:none;background:transparent;color:var(--text-secondary);font-size:.82rem;font-weight:500;cursor:pointer;transition:all .2s ease;font-family:inherit}
+.tab-btn:hover{background:var(--bg-tertiary);color:var(--text-primary)}
+.tab-btn.active{background:var(--text-primary);color:var(--text-inverse);font-weight:600}
+.header-right{display:flex;align-items:center;gap:8px}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.status-text{font-size:.75rem;color:var(--text-secondary);font-weight:500}
+.icon-btn{width:32px;height:32px;border-radius:50%;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .15s ease;position:relative}
+.icon-btn:hover{background:var(--bg-tertiary);color:var(--text-primary)}
+
+/* ═══ DROPDOWN ═══ */
+.dropdown-anchor{position:relative}
+.dropdown{position:absolute;top:calc(100% + 8px);right:0;width:320px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.15);z-index:200;opacity:0;transform:translateY(-6px) scale(.97);pointer-events:none;transition:all .22s cubic-bezier(.34,1.56,.64,1);overflow:hidden}
+.dropdown.show{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+.dropdown-header{padding:14px 16px 10px;border-bottom:1px solid var(--border)}
+.dropdown-title{font-size:.82rem;font-weight:600;color:var(--text-primary)}
+.dropdown-section{padding:8px}
+.dropdown-section-label{padding:4px 8px 6px;font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-tertiary)}
+.theme-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:4px 8px 8px}
+.theme-btn{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 4px;border-radius:10px;border:2px solid transparent;background:transparent;cursor:pointer;transition:all .2s ease;font-family:inherit}
+.theme-btn:hover{background:var(--bg-tertiary)}.theme-btn.active{border-color:var(--accent);background:var(--accent-light)}
+.theme-preview{width:32px;height:32px;border-radius:8px;border:1px solid var(--border)}
+.theme-name{font-size:.65rem;color:var(--text-secondary);font-weight:500}
+.config-field{padding:4px 8px;margin-bottom:6px}
+.config-label{font-size:.7rem;color:var(--text-tertiary);font-weight:500;margin-bottom:4px}
+.config-input{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg-tertiary);color:var(--text-primary);font-size:.8rem;font-family:inherit;outline:none;transition:all .2s ease}
+.config-input:focus{border-color:var(--border-active);box-shadow:var(--shadow-glow)}.config-input::placeholder{color:var(--text-tertiary)}
+.config-select{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg-tertiary);color:var(--text-primary);font-size:.8rem;font-family:inherit;outline:none;cursor:pointer;transition:all .2s ease;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%238e8e93' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+.config-select:focus{border-color:var(--border-active)}
+.btn-save{width:100%;padding:8px;border-radius:8px;border:none;background:var(--accent);color:white;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s ease;margin-top:4px}
+.btn-save:hover{opacity:.85}
+.btn-ghost{padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.75rem;font-weight:500;cursor:pointer;font-family:inherit;transition:all .2s ease}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ═══ MODEL SHEET (bottom sheet for model selection) ═══ */
+.model-sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;opacity:0;pointer-events:none;transition:opacity .25s ease;display:flex;align-items:flex-end;justify-content:center}
+.model-sheet-overlay.show{opacity:1;pointer-events:auto}
+.model-sheet{width:100%;max-width:480px;background:var(--bg-elevated);border-radius:20px 20px 0 0;padding:20px;transform:translateY(100%);transition:transform .3s cubic-bezier(.34,1.56,.64,1);max-height:70vh;overflow-y:auto}
+.model-sheet-overlay.show .model-sheet{transform:translateY(0)}
+.model-sheet-handle{width:36px;height:4px;background:var(--border-hover);border-radius:2px;margin:0 auto 16px}
+.model-sheet-title{font-size:.85rem;font-weight:600;color:var(--text-primary);margin-bottom:12px;text-align:center}
+.model-sheet-item{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;border:1px solid var(--border);margin-bottom:8px;cursor:pointer;transition:all .2s ease;background:transparent;width:100%;text-align:left;font-family:inherit;color:var(--text-primary)}
+.model-sheet-item:hover{border-color:var(--border-hover);background:var(--bg-tertiary)}
+.model-sheet-item.active{border-color:var(--accent);background:var(--accent-light)}
+.model-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.model-info{flex:1}.model-name{font-size:.82rem;font-weight:600}.model-hint{font-size:.7rem;color:var(--text-tertiary);margin-top:2px}
+.model-badge{font-size:.62rem;padding:2px 8px;border-radius:9999px;font-weight:600;flex-shrink:0}
+.model-badge.free{background:rgba(48,209,88,.12);color:var(--success)}
+.model-badge.pro{background:var(--accent-light);color:var(--accent)}
+.model-check{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border-hover);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s ease}
+.model-sheet-item.active .model-check{background:var(--accent);border-color:var(--accent)}
+.model-sheet-item.active .model-check::after{content:'✓';color:white;font-size:10px;font-weight:700}
+
+/* ═══ LEFT SIDEBAR ═══ */
+.sidebar-left{background:var(--bg-secondary);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:background .35s ease,border-color .35s ease}
+.sidebar-header{padding:14px 14px 10px}
+.sidebar-title{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--text-tertiary);margin-bottom:10px}
+.sidebar-section{flex:1;overflow-y:auto;padding:0 8px}
+.sidebar-section+.sidebar-section{border-top:1px solid var(--border);padding-top:8px;margin-top:4px}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:default;transition:all .2s ease;margin-bottom:2px}
+.sidebar-item:hover{background:var(--bg-tertiary)}
+.sidebar-item-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:var(--bg-tertiary);transition:transform .2s cubic-bezier(.34,1.56,.64,1)}
+.sidebar-item:hover .sidebar-item-icon{transform:scale(1.08)}
+.sidebar-item-info{flex:1;min-width:0}.sidebar-item-name{font-size:.8rem;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-item-desc{font-size:.68rem;color:var(--text-tertiary);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-footer{padding:10px 14px;border-top:1px solid var(--border);text-align:center}
+.sidebar-footer-text{font-size:.65rem;color:var(--text-tertiary);line-height:1.5}
+
+/* ═══ CHAT AREA ═══ */
+.chat-panel{display:flex;flex-direction:column;overflow:hidden;background:var(--bg-primary);transition:background .35s ease}
+.chat-area{flex:1;overflow-y:auto;padding:24px 32px;display:flex;flex-direction:column;gap:16px}
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:48px;animation:fadeInUp .6s ease}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.welcome-icon{width:72px;height:72px;background:linear-gradient(135deg,var(--accent),#5856d6);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:24px;box-shadow:var(--shadow-glow);transition:transform .3s ease}
+.welcome-icon:hover{transform:scale(1.05) rotate(-3deg)}
+.welcome h2{font-size:1.5rem;font-weight:700;letter-spacing:-.03em;margin-bottom:8px;background:linear-gradient(135deg,var(--text-primary),var(--text-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.welcome p{font-size:.88rem;color:var(--text-secondary);max-width:420px;line-height:1.7}
+.welcome-hints{display:flex;gap:8px;margin-top:28px;flex-wrap:wrap;justify-content:center;max-width:560px}
+.hint-chip{padding:9px 16px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;font-size:.8rem;color:var(--text-secondary);cursor:pointer;transition:all .2s ease;font-family:inherit}
+.hint-chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light);transform:translateY(-2px);box-shadow:var(--shadow-sm)}
+.hint-chip:active{transform:translateY(0)}
+
+/* ═══ MESSAGES ═══ */
+.message{display:flex;gap:12px;max-width:720px;animation:msgIn .3s ease}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.message.user{align-self:flex-end;flex-direction:row-reverse}.message.assistant{align-self:flex-start}
+.msg-avatar{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:2px}
+.message.user .msg-avatar{background:var(--accent);color:white}
+.message.assistant .msg-avatar{background:linear-gradient(135deg,#5856d6,#af52de);color:white}
+.msg-body{flex:1;min-width:0}
+.msg-content{padding:12px 16px;border-radius:14px;font-size:.88rem;line-height:1.65;word-break:break-word;white-space:pre-wrap}
+.message.user .msg-content{background:var(--accent);color:white;border-bottom-right-radius:4px}
+.message.assistant .msg-content{background:var(--bg-secondary);border:1px solid var(--border);border-bottom-left-radius:4px;color:var(--text-primary)}
+.msg-meta{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:.7rem;color:var(--text-tertiary)}
+.msg-tag{padding:1px 6px;background:var(--accent-light);color:var(--accent);border-radius:9999px;font-size:.65rem;font-weight:500}
+.tool-calls{margin-top:8px;padding:8px 12px;background:var(--bg-tertiary);border-radius:10px;border:1px solid var(--border)}
+.tool-call-item{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:.75rem;color:var(--text-secondary)}
+.tool-call-item+.tool-call-item{border-top:1px solid var(--border)}
+.tool-call-status{font-size:.7rem}.tool-call-name{font-weight:500;color:var(--text-primary);font-family:'SF Mono','Fira Code',monospace;font-size:.72rem}
+.tool-call-time{margin-left:auto;color:var(--text-tertiary);font-size:.65rem}
+.thinking{display:flex;align-items:center;gap:8px;padding:12px 16px;max-width:200px;animation:msgIn .3s ease}
+.thinking-dots{display:flex;gap:4px}
+.thinking-dots span{width:6px;height:6px;background:var(--text-tertiary);border-radius:50%;animation:dotPulse 1.4s ease-in-out infinite}
+.thinking-dots span:nth-child(2){animation-delay:.2s}.thinking-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dotPulse{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+.thinking-label{font-size:.8rem;color:var(--text-tertiary)}
+.progress-log{margin-top:8px;padding:8px 12px;background:var(--bg-tertiary);border-radius:10px;border:1px solid var(--border);font-size:.75rem;color:var(--text-secondary);line-height:1.6}
+
+/* ═══ INPUT BAR ═══ */
+.input-bar{padding:12px 32px 20px;background:var(--bg-primary);transition:background .35s ease}
+.input-container{max-width:720px;margin:0 auto;position:relative}
+.input-wrapper{display:flex;align-items:flex-end;background:var(--bg-secondary);border:1px solid var(--border);border-radius:14px;padding:10px 12px;transition:all .2s ease;box-shadow:var(--shadow-sm)}
+.input-wrapper:focus-within{border-color:var(--border-active);box-shadow:var(--shadow-glow)}
+.input-wrapper textarea{flex:1;border:none;outline:none;resize:none;font-size:.9rem;line-height:1.5;color:var(--text-primary);background:transparent;font-family:inherit;min-height:22px;max-height:120px;padding:4px 0}
+.input-wrapper textarea::placeholder{color:var(--text-tertiary)}
+.input-actions{display:flex;align-items:center;gap:4px;margin-left:8px;flex-shrink:0}
+.btn-send{width:34px;height:34px;border-radius:10px;border:none;background:var(--text-primary);color:var(--text-inverse);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s cubic-bezier(.34,1.56,.64,1)}
+.btn-send:hover{opacity:.85;transform:scale(1.06)}.btn-send:active{transform:scale(.94)}
+.input-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:6px;max-width:720px;margin-left:auto;margin-right:auto}
+.input-hint{font-size:.68rem;color:var(--text-tertiary)}.input-hint kbd{padding:1px 5px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:4px;font-size:.62rem;font-family:inherit}
+.model-pill{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-secondary);font-size:.72rem;color:var(--text-secondary);cursor:pointer;transition:all .2s ease;font-family:inherit;font-weight:500}
+.model-pill:hover{border-color:var(--accent);color:var(--accent)}
+.model-pill-dot{width:7px;height:7px;border-radius:50%}
+
+/* ═══ RIGHT PANEL ═══ */
+.panel-right{background:var(--bg-secondary);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:background .35s ease,border-color .35s ease}
+.panel-header{padding:14px 14px 10px;border-bottom:1px solid var(--border)}
+.panel-title{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--text-tertiary)}
+.panel-scroll{flex:1;overflow-y:auto;padding:10px}
+.stat-card{padding:12px;border-radius:10px;border:1px solid var(--border);margin-bottom:8px;transition:all .2s ease}
+.stat-card:hover{border-color:var(--border-hover)}
+.stat-label{font-size:.68rem;color:var(--text-tertiary);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.stat-value{font-size:1.3rem;font-weight:700;color:var(--text-primary);letter-spacing:-.02em}
+.stat-sub{font-size:.7rem;color:var(--text-tertiary);margin-top:2px}
+.log-entry{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;margin-bottom:4px;transition:all .15s ease;font-size:.75rem}
+.log-entry:hover{background:var(--bg-tertiary)}
+.log-icon{font-size:.75rem;flex-shrink:0;margin-top:1px}.log-text{flex:1;color:var(--text-secondary);line-height:1.4}
+.log-time{font-size:.62rem;color:var(--text-tertiary);flex-shrink:0;margin-top:1px}
+
+/* ═══ CONNECTION BANNER ═══ */
+.connection-banner{display:none;align-items:center;justify-content:center;gap:8px;padding:6px 16px;background:var(--warning);color:white;font-size:.75rem;font-weight:500;grid-column:1/-1}
+.connection-banner.show{display:flex}.connection-banner.success{background:var(--success);animation:fadeOut 3s ease forwards}
+@keyframes fadeOut{0%,70%{opacity:1}100%{opacity:0;display:none}}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:1024px){.app{grid-template-columns:1fr}.sidebar-left,.panel-right{display:none}.chat-area{padding:16px}.input-bar{padding:12px 16px 16px}}
+@media(max-width:768px){.welcome h2{font-size:1.25rem}.welcome p{font-size:.82rem}.welcome-hints{gap:6px}.hint-chip{padding:7px 12px;font-size:.75rem}.header-center{display:none}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ═══════ HEADER ═══════ -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo"><div class="logo-icon">🤖</div><span>My Agent</span></div>
+      <span style="font-size:.7rem;color:var(--text-tertiary);font-weight:500">v1.3.3</span>
+    </div>
+    <div class="header-center">
+      <button class="tab-btn active" onclick="switchTab('chat',this)">💬 对话</button>
+      <button class="tab-btn" onclick="switchTab('about',this)">ℹ️ 关于</button>
+    </div>
+    <div class="header-right">
+      <div style="display:flex;align-items:center;gap:6px">
+        <div class="status-dot" id="statusDot"></div>
+        <span class="status-text" id="statusText">就绪</span>
+      </div>
+      <div class="dropdown-anchor">
+        <button class="icon-btn" onclick="toggleDropdown('settingsDropdown')" title="设置">⚙️</button>
+        <div class="dropdown" id="settingsDropdown">
+          <div class="dropdown-header"><div class="dropdown-title">设置</div></div>
+          <!-- API Config -->
+          <div class="dropdown-section">
+            <div class="dropdown-section-label">🔑 API 配置</div>
+            <div class="config-field">
+              <div class="config-label">API Key</div>
+              <input type="password" class="config-input" id="cfgApiKey" placeholder="sk-...">
+            </div>
+            <div class="config-field">
+              <div class="config-label">API 地址（可选，留空用默认）</div>
+              <input type="text" class="config-input" id="cfgBaseUrl" placeholder="https://api.deepseek.com">
+            </div>
+            <div class="config-field">
+              <div class="config-label">模型</div>
+              <select class="config-select" id="cfgModel">
+                <option value="deepseek-chat">DeepSeek V3</option>
+                <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
+                <option value="deepseek-reasoner">DeepSeek Reasoner</option>
+                <option value="moonshot-v1-8k">Kimi (Moonshot)</option>
+                <option value="qwen-turbo">通义千问 Turbo</option>
+                <option value="glm-4-flash">智谱 GLM-4 Flash</option>
+                <option value="gpt-4o">GPT-4o</option>
+                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+              </select>
+            </div>
+            <div class="config-field" style="display:flex;gap:6px">
+              <button class="btn-save" style="flex:1" onclick="saveConfig()">💾 保存</button>
+              <button class="btn-ghost" onclick="testConnection()">🔗 测试</button>
+            </div>
+          </div>
+          <!-- Theme -->
+          <div class="dropdown-section">
+            <div class="dropdown-section-label">🎨 主题</div>
+            <div class="theme-grid">
+              <button class="theme-btn" onclick="setTheme('light')" data-theme-btn="light"><div class="theme-preview" style="background:linear-gradient(135deg,#ffffff,#f5f5f7)"></div><span class="theme-name">晨光白</span></button>
+              <button class="theme-btn active" onclick="setTheme('dark')" data-theme-btn="dark"><div class="theme-preview" style="background:linear-gradient(135deg,#141416,#1c1c1e)"></div><span class="theme-name">星夜黑</span></button>
+              <button class="theme-btn" onclick="setTheme('ocean')" data-theme-btn="ocean"><div class="theme-preview" style="background:linear-gradient(135deg,#0f1d2e,#1a3a5c)"></div><span class="theme-name">深海蓝</span></button>
+              <button class="theme-btn" onclick="setTheme('sand')" data-theme-btn="sand"><div class="theme-preview" style="background:linear-gradient(135deg,#fffcf8,#f5e6cc)"></div><span class="theme-name">暖砂金</span></button>
+              <button class="theme-btn" onclick="setTheme('mint')" data-theme-btn="mint"><div class="theme-preview" style="background:linear-gradient(135deg,#f8fcfa,#d4ede0)"></div><span class="theme-name">薄荷绿</span></button>
+              <button class="theme-btn" onclick="setTheme('lavender')" data-theme-btn="lavender"><div class="theme-preview" style="background:linear-gradient(135deg,#faf8fc,#e0d4f0)"></div><span class="theme-name">薰衣紫</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="icon-btn" onclick="clearChat()" title="清空对话">🗑️</button>
+    </div>
+  </header>
+
+  <!-- ═══════ CONNECTION BANNER ═══════ -->
+  <div class="connection-banner" id="connBanner">⚠️ 无法连接到 Agent 后端，请确认已启动 Flask 服务</div>
+
+  <!-- ═══════ LEFT SIDEBAR ═══════ -->
+  <aside class="sidebar-left">
+    <div class="sidebar-header"><div class="sidebar-title">🛠️ 工具</div></div>
+    <div class="sidebar-section" id="toolsList"></div>
+    <div class="sidebar-header" style="padding-top:8px"><div class="sidebar-title">🎯 技能</div></div>
+    <div class="sidebar-section" id="skillsList"></div>
+    <div class="sidebar-footer"><div class="sidebar-footer-text">Personal Meta-OS Agent<br>以 skill.md 为核心进化心脏</div></div>
+  </aside>
+
+  <!-- ═══════ CHAT PANEL ═══════ -->
+  <main class="chat-panel">
+    <div class="chat-area" id="chatArea">
+      <div class="welcome" id="welcomeState">
+        <div class="welcome-icon">🤖</div>
+        <h2>你好，我是 My Agent</h2>
+        <p>你的个人元操作系统智能体。<br>一句话，我来操控你的电脑。</p>
+        <div class="welcome-hints">
+          <div class="hint-chip" onclick="quickAsk('帮我整理一下桌面文件')">📂 整理桌面</div>
+          <div class="hint-chip" onclick="quickAsk('搜索一下最近AI领域有什么最新进展')">🔍 AI研究</div>
+          <div class="hint-chip" onclick="quickAsk('帮我截个图看看当前屏幕')">📸 截图分析</div>
+          <div class="hint-chip" onclick="quickAsk('找一下电脑里的PDF文件')">📄 搜索文件</div>
+          <div class="hint-chip" onclick="quickAsk('帮我打开GitHub')">🌐 浏览网页</div>
+          <div class="hint-chip" onclick="quickAsk('查看当前已加载的技能列表')">📋 技能列表</div>
+        </div>
+      </div>
+    </div>
+    <div class="input-bar">
+      <div class="input-container">
+        <div class="input-wrapper">
+          <textarea id="chatInput" rows="1" placeholder="对 My Agent 说点什么..." oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+          <div class="input-actions">
+            <button class="btn-send" onclick="sendMessage()" title="发送">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="input-bottom">
+          <div class="input-hint"><kbd>Enter</kbd> 发送 · <kbd>Shift+Enter</kbd> 换行</div>
+          <button class="model-pill" onclick="openModelSheet()" id="modelPill">
+            <span class="model-pill-dot" id="modelPillDot" style="background:#30d158"></span>
+            <span id="modelPillName">DeepSeek V3</span>
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ═══════ RIGHT PANEL ═══════ -->
+  <aside class="panel-right">
+    <div class="panel-header"><div class="panel-title">📊 执行统计</div></div>
+    <div class="panel-scroll">
+      <div class="stat-card"><div class="stat-label">对话轮次</div><div class="stat-value" id="statRounds">0</div></div>
+      <div class="stat-card"><div class="stat-label">工具调用</div><div class="stat-value" id="statTools">0</div><div class="stat-sub" id="statToolsSub">暂无调用</div></div>
+      <div class="stat-card"><div class="stat-label">Token 消耗</div><div class="stat-value" id="statTokens">0</div><div class="stat-sub" id="statCost">≈ ¥0</div></div>
+      <div style="margin-top:12px">
+        <div class="sidebar-title" style="padding:0 0 8px">📋 执行日志</div>
+        <div id="logPanel"><div class="log-entry"><span class="log-icon">💤</span><span class="log-text">等待你的第一条指令...</span></div></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- ═══════ MODEL SHEET ═══════ -->
+<div class="model-sheet-overlay" id="modelSheet" onclick="closeModelSheet(event)">
+  <div class="model-sheet" onclick="event.stopPropagation()">
+    <div class="model-sheet-handle"></div>
+    <div class="model-sheet-title">选择模型</div>
+    <div id="modelSheetList"></div>
+  </div>
+</div>
+
+<!-- ═══════ ABOUT PAGE ═══════ -->
+<div id="aboutPage" style="display:none;position:fixed;inset:0;z-index:50;background:var(--bg-primary);overflow-y:auto">
+  <div style="max-width:680px;margin:0 auto;padding:60px 32px">
+    <div style="text-align:center;margin-bottom:48px">
+      <div style="width:80px;height:80px;background:linear-gradient(135deg,var(--accent),#5856d6);border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 20px;box-shadow:var(--shadow-glow)">🤖</div>
+      <h1 style="font-size:2rem;font-weight:700;letter-spacing:-.03em;margin-bottom:8px">My Agent</h1>
+      <p style="font-size:1rem;color:var(--text-secondary);line-height:1.6">Personal Meta-OS Agent v1.3.3</p>
+      <p style="font-size:.88rem;color:var(--text-tertiary);margin-top:4px">以 skill.md 为核心进化心脏的"活系统"</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:36px">
+      <div class="stat-card"><div class="stat-label">🎯 技能系统</div><div style="font-size:.82rem;color:var(--text-secondary);margin-top:4px">第一次走分解流程，第二次直接匹配极速执行</div></div>
+      <div class="stat-card"><div class="stat-label">🔧 工具注册</div><div style="font-size:.82rem;color:var(--text-secondary);margin-top:4px">49 个工具自动注册，动态 Schema，优雅降级</div></div>
+      <div class="stat-card"><div class="stat-label">🧠 意图路由</div><div style="font-size:.82rem;color:var(--text-secondary);margin-top:4px">分类 → 匹配 → 执行/分解 → 沉淀</div></div>
+      <div class="stat-card"><div class="stat-label">📊 执行日志</div><div style="font-size:.82rem;color:var(--text-secondary);margin-top:4px">所有操作打点记录，为进化提供数据</div></div>
+      <div class="stat-card"><div class="stat-label">🔒 安全模块</div><div style="font-size:.82rem;color:var(--text-secondary);margin-top:4px">外部内容隔离 + Prompt Injection 防护</div></div>
+      <div class="stat-card"><div class="stat-label">🖥️ 桌面自动化</div><div style="font-size:.82rem;color:var(--text-secondary);margin-top:4px">PyAutoGUI + Playwright 驱动</div></div>
+    </div>
+    <div style="text-align:center">
+      <button class="hint-chip" onclick="document.getElementById('aboutPage').style.display='none';document.querySelector('.app').style.display='grid'" style="font-size:.88rem;padding:12px 32px">← 返回对话</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// MODEL REGISTRY — 多模型支持
+// ═══════════════════════════════════════════════════
+const MODEL_REGISTRY = {
+  'deepseek-chat':                { name:'智能机器人',         hint:'中文写作与代码能力强 · 免费使用',     color:'#30d158', tier:'free',  baseUrl:'https://api.deepseek.com',       endpoint:'/chat/completions' },
+  'deepseek-v4-pro':              { name:'DeepSeek V4 Pro',    hint:'DeepSeek 最新旗舰 · 推理能力更强',   color:'#30d158', tier:'free',  baseUrl:'https://api.deepseek.com',       endpoint:'/chat/completions' },
+  'deepseek-reasoner':            { name:'DeepSeek Reasoner',  hint:'深度推理模式 · 复杂问题首选',        color:'#30d158', tier:'free',  baseUrl:'https://api.deepseek.com',       endpoint:'/chat/completions' },
+  'moonshot-v1-8k':               { name:'Kimi',               hint:'月之暗面 · 超长上下文 · 阅读理解',    color:'#0ea5e9', tier:'free',  baseUrl:'https://api.moonshot.cn/v1',     endpoint:'/chat/completions' },
+  'qwen-turbo':                   { name:'通义千问',            hint:'阿里云 · 中文理解优秀 · 方案撰写',    color:'#0071e3', tier:'free',  baseUrl:'https://dashscope.aliyuncs.com/compatible-mode/v1', endpoint:'/chat/completions' },
+  'glm-4-flash':                  { name:'智谱 GLM-4',         hint:'知识问答与推理分析 · 性价比高',       color:'#5856d6', tier:'pro',   baseUrl:'https://open.bigmodel.cn/api/paas/v4',              endpoint:'/chat/completions' },
+  'gpt-4o':                       { name:'GPT-4o',             hint:'OpenAI 旗舰 · 最强推理能力',         color:'#e8453c', tier:'pro',   baseUrl:'https://api.openai.com/v1',      endpoint:'/chat/completions' },
+  'gpt-4o-mini':                  { name:'GPT-4o Mini',        hint:'OpenAI 轻量版 · 速度快成本低',       color:'#e8453c', tier:'pro',   baseUrl:'https://api.openai.com/v1',      endpoint:'/chat/completions' },
+  'claude-3-5-sonnet-20241022':   { name:'Claude 3.5 Sonnet',  hint:'Anthropic · 长文本与代码能力最强',    color:'#ff9f0a', tier:'pro',   baseUrl:'https://api.anthropic.com/v1',   endpoint:'/messages', isClaude:true },
+};
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+const state = {
+  messages: [],
+  isThinking: false,
+  totalRounds: 0, totalTools: 0, totalTokens: 0, totalCost: 0,
+  logs: [],
+  config: { apiKey: 'sk-a02236e3963348afaf3900f917f9379c', baseUrl: '', model: 'deepseek-chat' }
+};
+
+// ═══════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════
+function loadConfig() {
+  try { const s = localStorage.getItem('myagent_config'); if (s) Object.assign(state.config, JSON.parse(s)); } catch(e) {}
+  document.getElementById('cfgApiKey').value = state.config.apiKey;
+  document.getElementById('cfgBaseUrl').value = state.config.baseUrl;
+  document.getElementById('cfgModel').value = state.config.model;
+  updateModelDisplay();
+}
+
+function saveConfig() {
+  state.config.apiKey = document.getElementById('cfgApiKey').value.trim();
+  state.config.baseUrl = document.getElementById('cfgBaseUrl').value.trim();
+  state.config.model = document.getElementById('cfgModel').value;
+  localStorage.setItem('myagent_config', JSON.stringify(state.config));
+  updateModelDisplay();
+  closeAllDropdowns();
+  addLog('✅', '配置已保存');
+}
+
+function updateModelDisplay() {
+  const info = MODEL_REGISTRY[state.config.model] || MODEL_REGISTRY['deepseek-chat'];
+  document.getElementById('modelPillName').textContent = info.name;
+  document.getElementById('modelPillDot').style.background = info.color;
+}
+
+function getApiUrl() {
+  const info = MODEL_REGISTRY[state.config.model];
+  if (!info) return '';
+  const base = state.config.baseUrl || info.baseUrl;
+  return base + info.endpoint;
+}
+
+// ═══════════════════════════════════════════════════
+// MODEL SHEET
+// ═══════════════════════════════════════════════════
+function openModelSheet() {
+  const list = document.getElementById('modelSheetList');
+  list.innerHTML = Object.entries(MODEL_REGISTRY).map(([id, m]) => {
+    const active = id === state.config.model ? 'active' : '';
+    const badge = m.tier === 'free' ? '<span class="model-badge free">免费</span>' : '<span class="model-badge pro">需配置</span>';
+    return `<button class="model-sheet-item ${active}" onclick="pickModel('${id}')">
+      <div class="model-dot" style="background:${m.color}"></div>
+      <div class="model-info"><div class="model-name">${m.name}</div><div class="model-hint">${m.hint}</div></div>
+      ${badge}
+      <div class="model-check"></div>
+    </button>`;
+  }).join('');
+  document.getElementById('modelSheet').classList.add('show');
+}
+
+function closeModelSheet(e) { if (e.target === e.currentTarget) document.getElementById('modelSheet').classList.remove('show'); }
+
+function pickModel(id) {
+  state.config.model = id;
+  localStorage.setItem('myagent_config', JSON.stringify(state.config));
+  document.getElementById('cfgModel').value = id;
+  updateModelDisplay();
+  document.getElementById('modelSheet').classList.remove('show');
+  addLog('🔄', `切换模型: ${MODEL_REGISTRY[id]?.name || id}`);
+}
+
+// ═══════════════════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════════════════
+function setTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('myagent_theme',t);document.querySelectorAll('.theme-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('data-theme-btn')===t))}
+(function(){const s=localStorage.getItem('myagent_theme')||'dark';setTheme(s)})();
+
+// ═══════════════════════════════════════════════════
+// DROPDOWN
+// ═══════════════════════════════════════════════════
+function toggleDropdown(id){const el=document.getElementById(id);const isOpen=el.classList.contains('show');closeAllDropdowns();if(!isOpen)el.classList.add('show')}
+function closeAllDropdowns(){document.querySelectorAll('.dropdown').forEach(d=>d.classList.remove('show'))}
+document.addEventListener('click',e=>{if(!e.target.closest('.dropdown-anchor'))closeAllDropdowns()});
+
+// ═══════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════
+function switchTab(tab,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');if(tab==='about'){document.getElementById('aboutPage').style.display='block';document.querySelector('.app').style.display='none'}}
+
+// ═══════════════════════════════════════════════════
+// INPUT
+// ═══════════════════════════════════════════════════
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px'}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage()}}
+function quickAsk(t){document.getElementById('chatInput').value=t;sendMessage()}
+
+// ═══════════════════════════════════════════════════
+// MESSAGES
+// ═══════════════════════════════════════════════════
+function hideWelcome(){const w=document.getElementById('welcomeState');if(w)w.remove()}
+function addUserMessage(text){hideWelcome();const area=document.getElementById('chatArea');const now=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});const d=document.createElement('div');d.className='message user';d.innerHTML=`<div class="msg-avatar">U</div><div class="msg-body"><div class="msg-content">${escapeHtml(text)}</div><div class="msg-meta"><span>${now}</span></div></div>`;area.appendChild(d);area.scrollTop=area.scrollHeight}
+
+function addAssistantMessage(text,meta={}){
+  const area=document.getElementById('chatArea');const now=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+  const d=document.createElement('div');d.className='message assistant';
+  let tcHtml='';if(meta.toolCalls&&meta.toolCalls.length>0){tcHtml='<div class="tool-calls">';meta.toolCalls.forEach(tc=>{const s=tc.error?'❌':'✅';tcHtml+=`<div class="tool-call-item"><span class="tool-call-status">${s}</span><span class="tool-call-name">${escapeHtml(tc.tool||'?')}</span><span class="tool-call-time">${tc.elapsed_ms||0}ms</span></div>`});tcHtml+='</div>'}
+  let pgHtml='';if(meta.progress&&meta.progress.length>0){pgHtml='<div class="progress-log">'+meta.progress.map(p=>escapeHtml(p)).join('<br>')+'</div>'}
+  let stHtml='';if(meta.stats&&meta.stats.total_tokens>0){stHtml=`<span class="msg-tag">${meta.stats.total_tokens} tokens · ${MODEL_REGISTRY[state.config.model]?.name||''}</span>`}
+  d.innerHTML=`<div class="msg-avatar">🤖</div><div class="msg-body">${pgHtml}<div class="msg-content">${formatResponse(text)}</div>${tcHtml}<div class="msg-meta"><span>${now}</span>${stHtml}</div></div>`;
+  area.appendChild(d);area.scrollTop=area.scrollHeight;
+}
+
+function showThinking(){hideWelcome();const area=document.getElementById('chatArea');const d=document.createElement('div');d.className='thinking';d.id='thinkingIndicator';d.innerHTML=`<div class="msg-avatar" style="width:28px;height:28px;background:linear-gradient(135deg,#5856d6,#af52de);color:white;font-size:12px;border-radius:8px">🤖</div><div class="thinking-dots"><span></span><span></span><span></span></div><span class="thinking-label">思考中...</span>`;area.appendChild(d);area.scrollTop=area.scrollHeight}
+function hideThinking(){const el=document.getElementById('thinkingIndicator');if(el)el.remove()}
+
+// ═══════════════════════════════════════════════════
+// SEND
+// ═══════════════════════════════════════════════════
+async function sendMessage(){
+  const input=document.getElementById('chatInput');const text=input.value.trim();if(!text||state.isThinking)return;
+  input.value='';input.style.height='auto';state.isThinking=true;
+  addUserMessage(text);showThinking();setStatus('thinking','思考中...');
+  try{
+    const result=await callAgent(text);hideThinking();state.isThinking=false;
+    addAssistantMessage(result.response||'(无回复)',{toolCalls:result.tool_calls||[],stats:result.stats||{},progress:result._progress||[]});
+    if(result.stats){state.totalRounds+=result.stats.rounds||0;state.totalTools+=result.stats.tool_calls_count||0;state.totalTokens+=result.stats.total_tokens||0;state.totalCost+=result.stats.estimated_cost_cny||0;updateStats()}
+    if(result.tool_calls){result.tool_calls.forEach(tc=>{addLog(tc.error?'❌':'✅',`${tc.tool} (${tc.elapsed_ms}ms)`)})}
+    setStatus('ready','就绪');
+  }catch(err){hideThinking();state.isThinking=false;addAssistantMessage(`❌ ${err.message}`);setStatus('error','出错了');setTimeout(()=>setStatus('ready','就绪'),3000)}
+}
+
+// ═══════════════════════════════════════════════════
+// API CALL — 多模型支持
+// ═══════════════════════════════════════════════════
+async function callAgent(message){
+  // Try Flask backend first
+  try{const resp=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,session_id:'web-'+Date.now()}),signal:AbortSignal.timeout(120000)});if(resp.ok)return await resp.json()}catch(e){}
+
+  // Direct API call
+  if(!state.config.apiKey)throw new Error('请先在设置中配置 API Key');
+
+  const info=MODEL_REGISTRY[state.config.model];
+  if(!info)throw new Error('不支持的模型: '+state.config.model);
+
+  const apiUrl=getApiUrl();
+  const systemMsg='你是 My Agent，一个智能AI助手。直接解决问题，不做无意义的客套。';
+
+  // Claude uses different API format
+  if(info.isClaude){
+    const resp=await fetch(apiUrl,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':state.config.apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:state.config.model,max_tokens:4096,temperature:0.3,system:systemMsg,messages:[...state.messages.slice(-10).map(m=>({role:m.role,content:m.content})),{role:'user',content:message}]}),signal:AbortSignal.timeout(60000)});
+    if(!resp.ok)throw new Error(`API 错误 ${resp.status}`);
+    const data=await resp.json();const content=data.content?.[0]?.message?.content||data.content?.[0]?.text||'(无回复)';const usage=data.usage||{};
+    state.messages.push({role:'user',content:message});state.messages.push({role:'assistant',content});
+    return{response:content,tool_calls:[],stats:{total_tokens:(usage.input_tokens||0)+(usage.output_tokens||0),prompt_tokens:usage.input_tokens||0,completion_tokens:usage.output_tokens||0,estimated_cost_cny:((usage.input_tokens||0)*0.5+(usage.output_tokens||0)*2)/1000000,rounds:1,tool_calls_count:0}};
+  }
+
+  // OpenAI-compatible format (DeepSeek/Kimi/Qwen/GLM/GPT)
+  const resp=await fetch(apiUrl,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${state.config.apiKey}`},body:JSON.stringify({model:state.config.model,messages:[{role:'system',content:systemMsg},...state.messages.slice(-10).map(m=>({role:m.role,content:m.content})),{role:'user',content:message}],temperature:0.3,max_tokens:4096}),signal:AbortSignal.timeout(60000)});
+  if(!resp.ok){const e=await resp.text().catch(()=>'');throw new Error(`API 错误 ${resp.status}: ${e.substring(0,100)}`)}
+  const data=await resp.json();const content=data.choices?.[0]?.message?.content||'(无回复)';const usage=data.usage||{};
+  state.messages.push({role:'user',content:message});state.messages.push({role:'assistant',content});
+  return{response:content,tool_calls:[],stats:{total_tokens:usage.total_tokens||0,prompt_tokens:usage.prompt_tokens||0,completion_tokens:usage.completion_tokens||0,estimated_cost_cny:((usage.prompt_tokens||0)*0.5+(usage.completion_tokens||0)*2)/1000000,rounds:1,tool_calls_count:0}};
+}
+
+async function testConnection(){
+  if(!state.config.apiKey){addLog('❌','请先填写 API Key');return}
+  addLog('🔗','正在测试连接...');
+  try{
+    const info=MODEL_REGISTRY[state.config.model];
+    const apiUrl=getApiUrl();
+    const headers={'Content-Type':'application/json','Authorization':`Bearer ${state.config.apiKey}`};
+    if(info.isClaude){headers['x-api-key']=state.config.apiKey;headers['anthropic-version']='2023-06-01';delete headers['Authorization']}
+    const body=info.isClaude?{model:state.config.model,max_tokens:10,messages:[{role:'user',content:'hi'}]}:{model:state.config.model,messages:[{role:'user',content:'hi'}],max_tokens:10};
+    const resp=await fetch(apiUrl,{method:'POST',headers,body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
+    if(resp.ok){addLog('✅',`连接成功! ${info.name} 响应正常`)}else{addLog('❌',`连接失败: HTTP ${resp.status}`)}
+  }catch(e){addLog('❌',`连接失败: ${e.message}`)}
+}
+
+// ═══════════════════════════════════════════════════
+// STATS & LOGS
+// ═══════════════════════════════════════════════════
+function updateStats(){document.getElementById('statRounds').textContent=state.totalRounds;document.getElementById('statTools').textContent=state.totalTools;document.getElementById('statToolsSub').textContent=state.totalTools>0?'累计调用':'暂无调用';document.getElementById('statTokens').textContent=state.totalTokens>1000?(state.totalTokens/1000).toFixed(1)+'K':state.totalTokens;document.getElementById('statCost').textContent=`≈ ¥${state.totalCost.toFixed(4)}`}
+function addLog(icon,text){const panel=document.getElementById('logPanel');const now=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});const waiting=panel.querySelector('.log-entry');if(waiting&&waiting.textContent.includes('等待'))waiting.remove();const d=document.createElement('div');d.className='log-entry';d.innerHTML=`<span class="log-icon">${icon}</span><span class="log-text">${escapeHtml(text)}</span><span class="log-time">${now}</span>`;panel.insertBefore(d,panel.firstChild);while(panel.children.length>50)panel.removeChild(panel.lastChild)}
+
+// ═══════════════════════════════════════════════════
+// SIDEBAR
+// ═══════════════════════════════════════════════════
+async function loadSidebar(){
+  try{const resp=await fetch('/api/status');if(resp.ok){const d=await resp.json();renderTools(d.tools||[]);renderSkills(d.skills||[]);return}}catch(e){}
+  renderTools([{name:'scan_files',desc:'扫描目录文件',icon:'📂'},{name:'find_files',desc:'搜索文件',icon:'🔍'},{name:'move_file',desc:'移动文件',icon:'📁'},{name:'read_file',desc:'读取文件',icon:'📄'},{name:'write_file',desc:'写入文件',icon:'✏️'},{name:'organize_directory',desc:'整理目录',icon:'🗂️'},{name:'rollback_operation',desc:'回滚操作',icon:'↩️'},{name:'web_search',desc:'网络搜索',icon:'🌐'},{name:'browser_navigate',desc:'打开网页',icon:'🧭'},{name:'browser_screenshot',desc:'网页截图',icon:'📸'},{name:'desktop_screenshot',desc:'桌面截图',icon:'🖥️'},{name:'desktop_click',desc:'桌面点击',icon:'🖱️'},{name:'desktop_type',desc:'桌面打字',icon:'⌨️'},{name:'run_command',desc:'执行命令',icon:'💻'},{name:'recall',desc:'记忆检索',icon:'🧠'}]);
+  renderSkills([{name:'desktop-organize',goal:'桌面文件整理',icon:'📂'},{name:'file-search',goal:'文件搜索',icon:'🔍'},{name:'web-research',goal:'网络研究',icon:'🌐'}]);
+}
+function renderTools(tools){document.getElementById('toolsList').innerHTML=tools.map(t=>`<div class="sidebar-item"><div class="sidebar-item-icon">${t.icon||'🔧'}</div><div class="sidebar-item-info"><div class="sidebar-item-name">${escapeHtml(t.name)}</div><div class="sidebar-item-desc">${escapeHtml(t.desc||'')}</div></div></div>`).join('')}
+function renderSkills(skills){document.getElementById('skillsList').innerHTML=skills.map(s=>`<div class="sidebar-item"><div class="sidebar-item-icon">${s.icon||'🎯'}</div><div class="sidebar-item-info"><div class="sidebar-item-name">${escapeHtml(s.name)}</div><div class="sidebar-item-desc">${escapeHtml(s.goal||'')}</div></div></div>`).join('')}
+
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
+function setStatus(type,text){document.getElementById('statusDot').style.background={ready:'var(--success)',thinking:'var(--warning)',error:'var(--danger)'}[type]||'var(--text-tertiary)';document.getElementById('statusText').textContent=text}
+function escapeHtml(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function formatResponse(t){if(!t)return'';return escapeHtml(t).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code style="background:var(--bg-tertiary);padding:1px 5px;border-radius:4px;font-size:.82em;font-family:SF Mono,Fira Code,monospace">$1</code>').replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">$1</a>').replace(/\n/g,'<br>')}
+function clearChat(){document.getElementById('chatArea').innerHTML=`<div class="welcome" id="welcomeState"><div class="welcome-icon">🤖</div><h2>你好，我是 My Agent</h2><p>你的个人元操作系统智能体。<br>一句话，我来操控你的电脑。</p><div class="welcome-hints"><div class="hint-chip" onclick="quickAsk('帮我整理一下桌面文件')">📂 整理桌面</div><div class="hint-chip" onclick="quickAsk('搜索一下最近AI领域有什么最新进展')">🔍 AI研究</div><div class="hint-chip" onclick="quickAsk('帮我截个图看看当前屏幕')">📸 截图分析</div><div class="hint-chip" onclick="quickAsk('找一下电脑里的PDF文件')">📄 搜索文件</div><div class="hint-chip" onclick="quickAsk('帮我打开GitHub')">🌐 浏览网页</div><div class="hint-chip" onclick="quickAsk('查看当前已加载的技能列表')">📋 技能列表</div></div></div>`;state.messages=[];state.totalRounds=0;state.totalTools=0;state.totalTokens=0;state.totalCost=0;updateStats();document.getElementById('logPanel').innerHTML=`<div class="log-entry"><span class="log-icon">💤</span><span class="log-text">等待你的第一条指令...</span></div>`}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+loadConfig();loadSidebar();
+fetch('/api/status').then(r=>{if(r.ok)addLog('✅','已连接到 Agent 后端')}).catch(()=>{document.getElementById('connBanner').classList.add('show');addLog('⚠️','后端未启动，使用直连 API 模式');setTimeout(()=>document.getElementById('connBanner').classList.remove('show'),5000)});
+</script>
+</body>
+</html>
