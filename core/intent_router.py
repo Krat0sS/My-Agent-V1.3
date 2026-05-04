@@ -135,7 +135,7 @@ async def _llm_confirm_match(user_input: str, skill: Skill) -> Tuple[bool, float
         {"role": "user", "content": prompt},
     ]
 
-    result = await chat(messages, temperature=0.1)
+    result = await chat(messages, temperature=0.1, use_ollama=True)
 
     if result.get("_error") or result.get("_timeout"):
         return False, 0.0
@@ -218,7 +218,7 @@ async def decompose_task(user_input: str) -> dict:
         {"role": "user", "content": user_input},
     ]
 
-    result = await chat(messages, temperature=0.1)
+    result = await chat(messages, temperature=0.1, use_ollama=False)
 
     if result.get("_error") or result.get("_timeout"):
         return {"goal": user_input, "steps": [], "error": result.get("content", "")}

@@ -57,6 +57,13 @@ TOOL_CACHE_TTL = 60
 # 会话持久化
 SESSIONS_DIR = os.path.join(WORKSPACE, "sessions")
 
+# ═══ Ollama 本地模型（第二层漏斗） ═══
+OLLAMA_ENABLED = os.environ.get("OLLAMA_ENABLED", "true").lower() == "true"
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "modelscope.cn/qwen/Qwen2.5-7B-Instruct-GGUF:latest")
+OLLAMA_TIMEOUT = float(os.environ.get("OLLAMA_TIMEOUT", "30"))
+OLLAMA_MAX_TOKENS = int(os.environ.get("OLLAMA_MAX_TOKENS", "4096"))
+
 # Vision 模型
 VISION_API_KEY = os.environ.get("VISION_API_KEY", "")
 VISION_BASE_URL = os.environ.get("VISION_BASE_URL", "")

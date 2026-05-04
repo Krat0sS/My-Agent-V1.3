@@ -499,6 +499,12 @@ class Conversation:
                 fallback_to_decompose=True,
             )
 
+        # ═══ v1.3: 根据路由结果选择 LLM 客户端 ═══
+        # simple → Ollama 本地（低成本）
+        # medium/complex → DeepSeek 云端（高能力）
+        # execute_skill → 技能内部决定，这里不走 LLM
+        use_ollama = (routing.action == "direct_tool")
+
         # ═══ 普通 LLM 对话循环 ═══
         while self.tool_call_count < config.MAX_TOOL_CALLS_PER_TURN:
             if self.is_cancelled():
@@ -506,7 +512,8 @@ class Conversation:
                 self.messages.append({"role": "assistant", "content": fallback})
                 return self._build_result(fallback, rounds)
 
-            response = await chat(self.messages, tools=registry.get_schemas())
+            response = await chat(self.messages, tools=registry.get_schemas(),
+                                  use_ollama=use_ollama)
             rounds += 1
 
             if "_usage" in response:
