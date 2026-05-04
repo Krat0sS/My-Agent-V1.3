@@ -46,8 +46,16 @@ _SIMPLE_PATTERNS = [
 # 复杂任务特征（需要多步分解）
 _COMPLEX_KEYWORDS = [
     '然后', '接着', '之后', '再', '并且', '同时', '先',
-    '最后', '整理', '分类', '批量', '全部', '所有',
+    '最后', '分类', '批量', '全部', '所有',
     '研究', '分析', '对比', '总结', '写一份', '做个报告',
+]
+
+# 工具关键词：命中时应走 direct_tool（让 LLM 用 function calling 调工具）
+_TOOL_KEYWORDS = [
+    '搜索', '搜一下', '查找', '打开', '运行', '执行', '下载', '上传',
+    '截图', '截屏', '整理', '创建', '删除', '备份', '清理', '监控',
+    '分析', '移动', '复制', '重命名', '读取', '写入', '编辑',
+    '浏览器', '网页', '点击', '输入', '滚动',
 ]
 
 
@@ -398,7 +406,17 @@ async def route(user_input: str, skills: List[Skill] = None,
             if on_progress:
                 on_progress("❌ LLM 判定无匹配，走任务分解")
 
-        # 低分 或 LLM 精排未确认 → decompose
+        # 低分 或 LLM 精排未确认
+        # v3.0: 如果用户输入包含工具关键词，走 direct_tool 让 LLM 用 function calling 调工具
+        # 而不是走 decompose 生成手动步骤
+        if any(kw in user_input for kw in _TOOL_KEYWORDS):
+            return RoutingResult(
+                complexity="medium",
+                match_score=score,
+                candidates=candidates,
+                action="direct_tool",
+            )
+
         return RoutingResult(
             complexity="medium",
             match_score=score,
