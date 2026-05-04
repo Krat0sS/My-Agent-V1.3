@@ -10,12 +10,30 @@ set all_proxy=
 
 echo.
 echo   ========================================
-echo          My Agent v1.3.3
+echo          My Agent v1.3.5
 echo   ========================================
 echo.
 
-REM === Step 1: Find Python ===
+REM === Step 1: Find Python (优先 3.12 > 3.13 > 3.14 > 默认) ===
 set "PY_CMD="
+
+py -3.12 --version >nul 2>&1
+if %errorlevel% equ 0 (
+    set "PY_CMD=py -3.12"
+    goto :python_found
+)
+
+py -3.13 --version >nul 2>&1
+if %errorlevel% equ 0 (
+    set "PY_CMD=py -3.13"
+    goto :python_found
+)
+
+py -3.14 --version >nul 2>&1
+if %errorlevel% equ 0 (
+    set "PY_CMD=py -3.14"
+    goto :python_found
+)
 
 py -3 --version >nul 2>&1
 if %errorlevel% equ 0 (
@@ -25,11 +43,8 @@ if %errorlevel% equ 0 (
 
 python --version >nul 2>&1
 if %errorlevel% equ 0 (
-    python -c "import sys" >nul 2>&1
-    if %errorlevel% equ 0 (
-        set "PY_CMD=python"
-        goto :python_found
-    )
+    set "PY_CMD=python"
+    goto :python_found
 )
 
 python3 --version >nul 2>&1
@@ -40,7 +55,7 @@ if %errorlevel% equ 0 (
 
 echo   [ERROR] Python not found!
 echo.
-echo   Please install Python 3.10+ from:
+echo   Please install Python 3.12 from:
 echo   https://www.python.org/downloads/
 echo.
 echo   IMPORTANT: Check "Add Python to PATH" during install!
@@ -85,11 +100,11 @@ echo   [2/3] Installing dependencies (first time only) ...
 echo   This may take 1-2 minutes ...
 echo.
 
-pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
+pip install -r requirements.txt --no-cache-dir -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
 if %errorlevel% neq 0 (
     echo.
     echo   [WARN] Aliyun mirror failed, trying Tsinghua mirror ...
-    pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/ --trusted-host pypi.tuna.tsinghua.edu.cn
+    pip install -r requirements.txt --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple/ --trusted-host pypi.tuna.tsinghua.edu.cn
 )
 if %errorlevel% neq 0 (
     echo.
