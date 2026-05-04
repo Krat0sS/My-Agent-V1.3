@@ -598,6 +598,18 @@ def _categorize_file(filename: str) -> str:
 )
 def scan_files(path: str = ".", recursive: bool = False, include_hidden: bool = False) -> str:
     path = os.path.expanduser(path)
+
+    # 路径修正：~/Desktop 在 Windows 上可能不存在
+    if not os.path.isdir(path):
+        if "Desktop" in path or "desktop" in path:
+            alt = _get_special_folder("Desktop")
+            if os.path.isdir(alt):
+                path = alt
+        elif "Downloads" in path or "downloads" in path:
+            alt = _get_special_folder("Downloads")
+            if os.path.isdir(alt):
+                path = alt
+
     if not os.path.isdir(path):
         return json.dumps({"error": f"目录不存在: {path}"})
 
@@ -1018,7 +1030,7 @@ def find_files(path: str = ".", name: str = "", ext: str = "",
     parameters={
         "type": "object",
         "properties": {
-            "path": {"type": "string", "description": "要整理的目录路径（如 ~/Desktop, ~/Downloads）"},
+            "path": {"type": "string", "description": f"要整理的目录路径（如 {_get_special_folder('Desktop')}, {_get_special_folder('Downloads')}）"},
             "dry_run": {"type": "boolean", "description": "预览模式：只返回分类方案，不实际移动文件", "default": False},
             "exclude": {
                 "type": "array",
@@ -1040,6 +1052,18 @@ def organize_directory(path: str, dry_run: bool = False, exclude: list = None,
     from tools import rollback
 
     path = os.path.expanduser(path)
+
+    # 路径修正：~/Desktop 在 Windows 上可能不存在，尝试跨平台查找
+    if not os.path.isdir(path):
+        if "Desktop" in path or "desktop" in path:
+            alt = _get_special_folder("Desktop")
+            if os.path.isdir(alt):
+                path = alt
+        elif "Downloads" in path or "downloads" in path:
+            alt = _get_special_folder("Downloads")
+            if os.path.isdir(alt):
+                path = alt
+
     if not os.path.isdir(path):
         return json.dumps({"error": f"目录不存在: {path}"})
 
@@ -1209,13 +1233,15 @@ def check_directory_status() -> str:
     parameters={
         "type": "object",
         "properties": {
-            "path": {"type": "string", "description": "目录路径", "default": "~/Downloads"},
+            "path": {"type": "string", "description": "目录路径"},
             "hours": {"type": "integer", "description": "检查最近多少小时内的新增文件", "default": 24}
         }
     }
 )
-def get_new_files(path: str = "~/Downloads", hours: int = 24) -> str:
+def get_new_files(path: str = None, hours: int = 24) -> str:
     from tools.file_monitor import get_new_files as _get_new
+    if path is None:
+        path = _get_special_folder("Downloads")
     result = _get_new(path, hours)
     return json.dumps({
         "path": path,
@@ -1240,6 +1266,29 @@ def mark_cleanup_done(dir_label: str) -> str:
     from tools.file_monitor import mark_cleanup
     mark_cleanup(dir_label)
     return json.dumps({"success": True, "message": f"已标记「{dir_label}」为已整理，7 天内不再提醒"})
+
+
+def _get_special_folder(folder_name: str) -> str:
+    """获取跨平台特殊目录（桌面、下载等）"""
+    import platform
+    if platform.system() == "Windows":
+        try:
+            import winreg
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders")
+            if folder_name == "Desktop":
+                path = winreg.QueryValueEx(key, "Desktop")[0]
+            elif folder_name == "Downloads":
+                # Downloads 没有注册表项，用常见的默认路径
+                path = os.path.join(os.path.expanduser("~"), "Downloads")
+            else:
+                path = os.path.expanduser(f"~/{folder_name}")
+            winreg.CloseKey(key)
+            if os.path.exists(path):
+                return path
+        except Exception:
+            pass
+    return os.path.expanduser(f"~/{folder_name}")
 
 
 def _human_size_py(size_bytes: int) -> str:

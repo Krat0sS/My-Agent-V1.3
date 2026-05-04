@@ -123,6 +123,8 @@ class MemorySystem:
 - 打开浏览器：start chrome 或 start msedge
 - 打开 URL：start "" "https://example.com"
 - 打开文件夹：explorer C:\\path\\to\\folder
+- 桌面路径：C:\\Users\\<用户名>\\Desktop
+- 下载路径：C:\\Users\\<用户名>\\Downloads
 
 在 Linux/macOS 上：
 - 打开浏览器：xdg-open https://example.com 或 open https://example.com
