@@ -14,41 +14,36 @@ echo          My Agent v1.3.5
 echo   ========================================
 echo.
 
-REM === Step 1: Find Python (优先 3.12 > 3.13 > 3.14 > 默认) ===
+REM ═══ Step 1: Find best Python (3.12 > 3.13 > 3.14 > default) ═══
 set "PY_CMD="
+set "PY_VER="
 
 py -3.12 --version >nul 2>&1
-if %errorlevel% equ 0 (
-    set "PY_CMD=py -3.12"
-    goto :python_found
-)
+if %errorlevel% equ 0 ( set "PY_CMD=py -3.12" & set "PY_VER=3.12" & goto :python_found )
 
 py -3.13 --version >nul 2>&1
-if %errorlevel% equ 0 (
-    set "PY_CMD=py -3.13"
-    goto :python_found
-)
+if %errorlevel% equ 0 ( set "PY_CMD=py -3.13" & set "PY_VER=3.13" & goto :python_found )
 
 py -3.14 --version >nul 2>&1
-if %errorlevel% equ 0 (
-    set "PY_CMD=py -3.14"
-    goto :python_found
-)
+if %errorlevel% equ 0 ( set "PY_CMD=py -3.14" & set "PY_VER=3.14" & goto :python_found )
 
 py -3 --version >nul 2>&1
 if %errorlevel% equ 0 (
+    for /f "tokens=2" %%v in ('py -3 --version 2^>^&1') do set "PY_VER=%%v"
     set "PY_CMD=py -3"
     goto :python_found
 )
 
 python --version >nul 2>&1
 if %errorlevel% equ 0 (
+    for /f "tokens=2" %%v in ('python --version 2^>^&1') do set "PY_VER=%%v"
     set "PY_CMD=python"
     goto :python_found
 )
 
 python3 --version >nul 2>&1
 if %errorlevel% equ 0 (
+    for /f "tokens=2" %%v in ('python3 --version 2^>^&1') do set "PY_VER=%%v"
     set "PY_CMD=python3"
     goto :python_found
 )
@@ -64,19 +59,31 @@ pause
 exit /b 1
 
 :python_found
-echo   [OK] Python found: %PY_CMD%
-%PY_CMD% --version
+echo   [OK] Python: %PY_CMD% (%PY_VER%)
 echo.
 
-REM === Step 2: Create venv if needed ===
-if exist "venv\Scripts\activate.bat" goto :venv_ready
+REM ═══ Step 2: Check venv Python version ═══
+if not exist "venv\Scripts\activate.bat" goto :create_venv
 
-echo   [1/3] Creating virtual environment ...
+REM venv exists — check if it matches our Python version
+for /f "tokens=2" %%v in ('venv\Scripts\python.exe --version 2^>^&1') do set "VENV_VER=%%v"
+echo   [INFO] Existing venv: Python %VENV_VER%
+
+REM Extract major.minor from both versions
+set "NEED_VER=%PY_VER:~0,4%"
+set "HAVE_VER=%VENV_VER:~0,4%"
+
+if "%NEED_VER%"=="%HAVE_VER%" goto :venv_ready
+
+echo   [WARN] venv is Python %VENV_VER%, but we need %PY_VER%. Recreating ...
+rmdir /s /q venv >nul 2>&1
+
+:create_venv
+echo   [1/4] Creating venv with Python %PY_VER% ...
 %PY_CMD% -m venv venv
 if %errorlevel% neq 0 (
     echo.
     echo   [ERROR] Failed to create venv!
-    echo   Try running manually: %PY_CMD% -m venv venv
     pause
     exit /b 1
 )
@@ -84,7 +91,7 @@ echo   [OK] venv created.
 echo.
 
 :venv_ready
-REM === Step 3: Activate venv ===
+REM ═══ Step 3: Activate venv ═══
 call venv\Scripts\activate.bat
 if %errorlevel% neq 0 (
     echo   [ERROR] Failed to activate venv!
@@ -92,11 +99,14 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-REM === Step 4: Install dependencies if needed ===
+REM ═══ Step 4: Upgrade pip ═══
+python -m pip install --upgrade pip --quiet --no-cache-dir 2>nul
+
+REM ═══ Step 5: Install dependencies if needed ═══
 python -c "import flask" >nul 2>&1
 if %errorlevel% equ 0 goto :skip_install
 
-echo   [2/3] Installing dependencies (first time only) ...
+echo   [2/4] Installing dependencies (first time only) ...
 echo   This may take 1-2 minutes ...
 echo.
 
@@ -117,10 +127,10 @@ echo   [OK] Dependencies installed.
 goto :after_install
 
 :skip_install
-echo   [2/3] Dependencies already installed, skipping.
+echo   [2/4] Dependencies already installed, skipping.
 
 :after_install
-REM === Step 5: Create .env if needed ===
+REM ═══ Step 6: Create .env if needed ═══
 if not exist ".env" (
     if exist ".env.example" (
         copy .env.example .env >nul
@@ -128,9 +138,28 @@ if not exist ".env" (
     )
 )
 
-REM === Step 6: Launch ===
+REM ═══ Step 7: Pre-flight checks ═══
 echo.
-echo   [3/3] Starting My Agent ...
+echo   [3/4] Pre-flight checks ...
+
+REM Check server.py exists
+if not exist "server.py" (
+    echo   [ERROR] server.py not found! Are you in the right directory?
+    pause
+    exit /b 1
+)
+
+REM Check Ollama (optional, don't fail if missing)
+curl -s http://localhost:11434/api/tags >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   [OK] Ollama detected — local model available
+) else (
+    echo   [INFO] Ollama not running — will use DeepSeek cloud
+)
+
+REM ═══ Step 8: Launch ═══
+echo.
+echo   [4/4] Starting My Agent ...
 echo.
 echo   ========================================
 echo   My Agent is running!
