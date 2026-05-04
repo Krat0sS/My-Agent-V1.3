@@ -222,32 +222,46 @@ def _assess_clarity(user_input: str) -> float:
 
 def _check_tool_availability(user_input: str) -> float:
     """
-    工具可用性评估。
+    工具可用性评估 v2：用 ToolRegistry 的工具描述做语义匹配。
 
-    检查用户请求的操作是否能被现有工具覆盖。
-    返回: [0, 1]
+    核心思路：把用户输入切成 n-gram，和每个工具的 name+description 做交集，
+    取最佳匹配分数。不是字符级重叠，是词级重叠。
+
+    返回: [0.3, 1.0]（最低 0.3，不要让"没匹配"拖垮外卦）
     """
-    # 简化实现：基于已注册工具的能力范围做关键词匹配
-    # 后续可以接入 ToolRegistry 做精确匹配
-    tool_keywords = {
-        'file': ['文件', '搜索', '查找', '整理', '备份', '清理', '移动', '复制'],
-        'web': ['网页', '浏览器', '搜索', '下载', '网络'],
-        'desktop': ['桌面', '截图', '屏幕', '窗口'],
-        'system': ['系统', '进程', 'CPU', '内存', '磁盘'],
-    }
+    available = [td for td in registry.get_all() if td.is_available()]
+    if not available:
+        return 0.0
 
-    text = user_input if user_input else ''
-    matched_tools = 0
-    for tool_type, keywords in tool_keywords.items():
-        if any(k in text for k in keywords):
-            matched_tools += 1
+    text = user_input.strip().lower()
+    if not text:
+        return 0.3
 
-    if matched_tools == 0:
-        return 0.5  # 无法判断，默认中等
-    elif matched_tools == 1:
-        return 0.8  # 明确指向某类工具
-    else:
-        return 0.6  # 多类工具都相关，可能需要编排
+    # 把用户输入切成 2-4 字的滑动窗口（中文没有空格分词）
+    def ngrams(s, n):
+        return [s[i:i+n] for i in range(len(s)-n+1)]
+
+    user_tokens = set(ngrams(text, 2)) | set(ngrams(text, 3)) | set(ngrams(text, 4))
+    # 加上单字，防漏
+    user_tokens |= set(text)
+
+    best_score = 0.0
+
+    for td in available:
+        tool_text = (td.name + " " + (td.description or "")).lower()
+        tool_tokens = set(ngrams(tool_text, 2)) | set(ngrams(tool_text, 3)) | set(tool_text)
+
+        if not tool_tokens:
+            continue
+
+        # Jaccard-like: 交集 / 用户token数（不是并集，因为工具描述通常比用户输入长很多）
+        intersection = user_tokens & tool_tokens
+        score = len(intersection) / max(len(user_tokens), 1)
+
+        best_score = max(best_score, score)
+
+    # 映射到 [0.3, 1.0] 区间（最低 0.3，不要让"没匹配"拖垮外卦）
+    return max(0.3, min(1.0, best_score * 2))
 
 
 def _assess_outer(user_input: str) -> tuple:
