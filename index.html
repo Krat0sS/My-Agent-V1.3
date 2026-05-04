@@ -417,14 +417,14 @@ body{font-family:'Inter','Noto Sans SC',-apple-system,BlinkMacSystemFont,sans-se
 // ═══════════════════════════════════════════════════
 const MODEL_REGISTRY = {
   'deepseek-chat':                { name:'My Agent',           hint:'智能助手 · 中文写作与代码能力强',     color:'#30d158', tier:'free',  baseUrl:'https://api.deepseek.com',       endpoint:'/chat/completions', isDefault:true },
-  'deepseek-v4-pro':              { name:'My Agent Pro',       hint:'增强版 · 推理能力更强',              color:'#30d158', tier:'free',  baseUrl:'https://api.deepseek.com',       endpoint:'/chat/completions', isDefault:true },
-  'deepseek-reasoner':            { name:'My Agent Reasoner',  hint:'深度推理模式 · 复杂问题首选',        color:'#30d158', tier:'free',  baseUrl:'https://api.deepseek.com',       endpoint:'/chat/completions', isDefault:true },
-  'moonshot-v1-8k':               { name:'Kimi',               hint:'月之暗面 · 超长上下文 · 阅读理解',    color:'#0ea5e9', tier:'free',  baseUrl:'https://api.moonshot.cn/v1',     endpoint:'/chat/completions' },
-  'qwen-turbo':                   { name:'通义千问',            hint:'阿里云 · 中文理解优秀 · 方案撰写',    color:'#0071e3', tier:'free',  baseUrl:'https://dashscope.aliyuncs.com/compatible-mode/v1', endpoint:'/chat/completions' },
-  'glm-4-flash':                  { name:'智谱 GLM-4',         hint:'知识问答与推理分析 · 性价比高',       color:'#5856d6', tier:'pro',   baseUrl:'https://open.bigmodel.cn/api/paas/v4',              endpoint:'/chat/completions' },
-  'gpt-4o':                       { name:'GPT-4o',             hint:'OpenAI 旗舰 · 最强推理能力',         color:'#e8453c', tier:'pro',   baseUrl:'https://api.openai.com/v1',      endpoint:'/chat/completions' },
-  'gpt-4o-mini':                  { name:'GPT-4o Mini',        hint:'OpenAI 轻量版 · 速度快成本低',       color:'#e8453c', tier:'pro',   baseUrl:'https://api.openai.com/v1',      endpoint:'/chat/completions' },
-  'claude-3-5-sonnet-20241022':   { name:'Claude 3.5 Sonnet',  hint:'Anthropic · 长文本与代码能力最强',    color:'#ff9f0a', tier:'pro',   baseUrl:'https://api.anthropic.com/v1',   endpoint:'/messages', isClaude:true },
+  'deepseek-v4-pro':              { name:'My Agent Pro',       hint:'增强版 · 推理能力更强',              color:'#30d158', tier:'unconfigured',  baseUrl:'https://api.deepseek.com',       endpoint:'/chat/completions' },
+  'deepseek-reasoner':            { name:'My Agent Reasoner',  hint:'深度推理模式 · 复杂问题首选',        color:'#30d158', tier:'unconfigured',  baseUrl:'https://api.deepseek.com',       endpoint:'/chat/completions' },
+  'moonshot-v1-8k':               { name:'Kimi',               hint:'月之暗面 · 超长上下文 · 阅读理解',    color:'#0ea5e9', tier:'unconfigured',  baseUrl:'https://api.moonshot.cn/v1',     endpoint:'/chat/completions' },
+  'qwen-turbo':                   { name:'通义千问',            hint:'阿里云 · 中文理解优秀 · 方案撰写',    color:'#0071e3', tier:'unconfigured',  baseUrl:'https://dashscope.aliyuncs.com/compatible-mode/v1', endpoint:'/chat/completions' },
+  'glm-4-flash':                  { name:'智谱 GLM-4',         hint:'知识问答与推理分析 · 性价比高',       color:'#5856d6', tier:'unconfigured',   baseUrl:'https://open.bigmodel.cn/api/paas/v4',              endpoint:'/chat/completions' },
+  'gpt-4o':                       { name:'GPT-4o',             hint:'OpenAI 旗舰 · 最强推理能力',         color:'#e8453c', tier:'unconfigured',   baseUrl:'https://api.openai.com/v1',      endpoint:'/chat/completions' },
+  'gpt-4o-mini':                  { name:'GPT-4o Mini',        hint:'OpenAI 轻量版 · 速度快成本低',       color:'#e8453c', tier:'unconfigured',   baseUrl:'https://api.openai.com/v1',      endpoint:'/chat/completions' },
+  'claude-3-5-sonnet-20241022':   { name:'Claude 3.5 Sonnet',  hint:'Anthropic · 长文本与代码能力最强',    color:'#ff9f0a', tier:'unconfigured',   baseUrl:'https://api.anthropic.com/v1',   endpoint:'/messages', isClaude:true },
 };
 
 // ═══════════════════════════════════════════════════
@@ -510,7 +510,7 @@ function openModelSheet() {
   const list = document.getElementById('modelSheetList');
   list.innerHTML = Object.entries(MODEL_REGISTRY).map(([id, m]) => {
     const active = id === state.config.model ? 'active' : '';
-    const badge = m.tier === 'free' ? '<span class="model-badge free">免费</span>' : '<span class="model-badge pro">需配置</span>';
+    const badge = m.tier === 'free' ? '<span class="model-badge free">免费</span>' : '<span class="model-badge pro">未配置</span>';
     return `<button class="model-sheet-item ${active}" onclick="pickModel('${id}')">
       <div class="model-dot" style="background:${m.color}"></div>
       <div class="model-info"><div class="model-name">${m.name}</div><div class="model-hint">${m.hint}</div></div>
